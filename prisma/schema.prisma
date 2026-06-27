@@ -1,0 +1,205 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+enum ChannelProvider {
+  META
+  TELEGRAM
+  WEBCHAT
+  VOICE
+}
+
+enum ConnectionStatus {
+  PENDING
+  CONNECTING
+  CONNECTED
+  SYNCING
+  TOKEN_EXPIRED
+  PERMISSIONS_CHANGED
+  WEBHOOK_INVALID
+  RECONNECT_REQUIRED
+  DISCONNECTED
+  FAILED
+}
+
+model Commerce {
+  id               String        @id @default(uuid())
+  name             String
+  address          String?
+  businessHours    Json?       // JSON object to store working hours
+  
+  systemPrompt     String        
+  aiModel          String        @default("gpt-4o-mini")
+  aiTemperature    Float         @default(0.7)
+  aiMaxTokens      Int           @default(500)
+  // Facturación y Monetización
+  stripeCustomerId       String?       @unique
+  stripeSubscriptionId   String?       @unique
+  subscriptionStatus     String        @default("INACTIVE") // INACTIVE, ACTIVE, PAST_DUE, CANCELED
+  isLifetimeFree         Boolean       @default(false) // Para la empresa amiga
+  monthlyTokenBudget     Int           @default(100000) // Límite de tokens por mes
+  tokensUsedThisMonth    Int           @default(0) // Contador mensual
+  onboardingCompleted    Boolean       @default(false)
+
+  createdAt        DateTime      @default(now())
+  sessions         Session[]
+  users            User[]
+  knowledgeSources KnowledgeSource[]
+  auditLogs        AuditLog[]
+  insights         Insight[]
+  semanticCaches   SemanticCache[]
+  channelConnections ChannelConnection[]
+}
+
+model ChannelConnection {
+  id                String   @id @default(uuid())
+  commerceId        String
+  provider          ChannelProvider
+  
+  // Credenciales cifradas AES-256
+  accessToken       String?  @db.Text
+  refreshToken      String?  @db.Text
+  
+  // Meta Specific Metadata
+  scopesGranted     String?  @db.Text // JSON list
+  tokenType         String?
+  metaUserId        String?
+  metaBusinessId    String?
+  metaAppId         String?
+  
+  // Identificadores de activos
+  channelAccountId  String?  // WABA ID, Page ID, Telegram Bot ID, etc
+  channelPhoneId    String?  // WA Phone ID
+  
+  status            ConnectionStatus @default(PENDING)
+  lastErrorReason   String?  @db.Text
+  
+  lastValidatedAt   DateTime?
+  lastSyncedAt      DateTime?
+  tokenExpiresAt    DateTime?
+  createdAt         DateTime @default(now())
+
+  commerce          Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+  sessions          Session[]
+
+  @@index([commerceId])
+  @@index([channelAccountId])
+  @@index([channelPhoneId])
+}
+
+model User {
+  id         String   @id @default(uuid())
+  commerceId String
+  email      String   @unique
+  password   String
+  role       String   @default("OWNER") // OWNER, ADMIN, AGENT
+  commerce   Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+
+  @@index([commerceId])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  commerceId  String   
+  userId      String?  
+  action      String   
+  targetId    String   
+  details     String   @db.Text
+  createdAt   DateTime @default(now())
+  commerce    Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+
+  @@index([commerceId])
+  @@index([userId])
+}
+
+model KnowledgeSource {
+  id         String   @id @default(uuid())
+  commerceId String
+  name       String?  // Nombre del archivo o título del hilo
+  type       String   
+  category   String   @default("GENERAL") // GENERAL, POLICIES, PRODUCTS, QUICK_REPLIES
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+  commerce   Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+  chunks     DocumentChunk[]
+
+  @@index([commerceId])
+}
+
+model DocumentChunk {
+  id                String   @id @default(uuid())
+  knowledgeSourceId String
+  content           String   @db.Text
+  embedding         Unsupported("vector(1536)")?
+  source            KnowledgeSource @relation(fields: [knowledgeSourceId], references: [id], onDelete: Cascade)
+
+  @@index([knowledgeSourceId])
+}
+
+model Session {
+  id                  String    @id @default(uuid())
+  commerceId          String
+  channelConnectionId String
+  customerIdentifier  String
+  status              String    @default("ACTIVE") 
+  isTest              Boolean   @default(false)
+  context             String?   
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  commerce            Commerce  @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+  channelConnection   ChannelConnection @relation(fields: [channelConnectionId], references: [id], onDelete: Cascade)
+  messages            Message[]
+
+  @@unique([commerceId, customerIdentifier, channelConnectionId]) 
+  @@index([commerceId])
+  @@index([channelConnectionId])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  sessionId  String
+  role       String   
+  type       String   @default("TEXT")
+  content    String   
+  tokensUsed     Int?
+  estimatedCost  Float?
+  latencyMs      Int?
+  createdAt  DateTime @default(now())
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model Insight {
+  id          String   @id @default(uuid())
+  commerceId  String
+  type        String   // e.g. "MISSING_KNOWLEDGE", "TONE_SUGGESTION"
+  title       String
+  description String   @db.Text
+  actionLabel String?
+  actionData  Json?    // JSON object with data needed for the action
+  isResolved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  commerce    Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+
+  @@index([commerceId])
+}
+
+model SemanticCache {
+  id         String   @id @default(uuid())
+  commerceId String
+  queryHash  String   @unique
+  embedding  Unsupported("vector(1536)")?
+  response   String   @db.Text
+  createdAt  DateTime @default(now())
+  commerce   Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+
+  @@index([commerceId])
+}

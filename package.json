@@ -1,0 +1,50 @@
+{
+  "name": "agente-pedidos",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev:server": "tsx watch src/index.ts",
+    "dev:worker": "tsx watch src/worker.ts",
+    "dev:document-worker": "tsx watch src/document-worker.ts",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:worker\" \"npm run dev:document-worker\"",
+    "build": "npx prisma generate && tsc",
+    "start:api": "node dist/index.js",
+    "start:worker": "node dist/worker.js",
+    "start:docworker": "node dist/document-worker.js",
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@langchain/textsplitters": "^1.0.1",
+    "@prisma/client": "^5.22.0",
+    "@types/bcryptjs": "^2.4.6",
+    "axios": "^1.18.0",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^5.79.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "ioredis": "^5.11.1",
+    "llamaindex": "^0.12.1",
+    "mammoth": "^1.12.0",
+    "openai": "^6.44.0",
+    "pdf-parse": "^1.1.1",
+    "prisma": "^5.22.0",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.0.0",
+    "@types/pdf-parse": "^1.1.5",
+    "concurrently": "^10.0.3",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}
