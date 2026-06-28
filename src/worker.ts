@@ -69,9 +69,12 @@ const worker = new Worker(
       return;
     }
 
-    // CHECK BUDGET
-    if (!commerce.isLifetimeFree && commerce.tokensUsedThisMonth > commerce.monthlyTokenBudget) {
-      console.warn(`[Worker] Commerce ${commerce.id} ha excedido su presupuesto mensual de tokens.`);
+    // CHECK BUDGET via FeatureGuard
+    const { FeatureGuard } = require('./billing/core/FeatureGuard');
+    const featureCheck = await FeatureGuard.canExecute(commerce.id, 'conversations', 1);
+    
+    if (!featureCheck.allowed) {
+      console.warn(`[Worker] Commerce ${commerce.id} excedió límite/presupuesto. Razón: ${featureCheck.reason}`);
       const budgetMsg = "Lo siento, nuestro sistema se encuentra en mantenimiento temporal. Por favor, contacta con la tienda por otro medio.";
       await addMessageToSession(session.id, 'assistant', budgetMsg);
       await sendOmnichannelMessage(commerce, channelConnection, customerIdentifier, budgetMsg);
@@ -147,14 +150,11 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
       // 6. Enviamos el mensaje al cliente final vía la red correspondiente
       await sendOmnichannelMessage(commerce, channelConnection, customerIdentifier, aiResponse);
       
-      // 7. Descontar del presupuesto (aproximado usando una fórmula o si lo tuvieramos de OpenAI)
-      // Como generateAIResponse no devuelve los tokens usados actualmente, hacemos una estimación:
-      // (Prompt + Response length) / 4
+      // 7. Descontar del presupuesto mediante FeatureGuard
       const estimatedTokens = Math.floor((ragPrompt.length + aiResponse.length) / 4);
-      await prisma.commerce.update({
-        where: { id: commerce.id },
-        data: { tokensUsedThisMonth: { increment: estimatedTokens } }
-      });
+      
+      await FeatureGuard.trackConsumption(commerce.id, 'openai_tokens', estimatedTokens);
+      await FeatureGuard.trackConsumption(commerce.id, 'conversations', 1);
 
       console.log(`[Worker] Job ${job.id} procesado correctamente. Respuesta enviada vía ${channel}. Tokens estimados: ${estimatedTokens}`);
     } catch (error) {

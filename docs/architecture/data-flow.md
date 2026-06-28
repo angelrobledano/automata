@@ -1,59 +1,78 @@
-# Flujo de Datos (Data Flow)
+# Flujo de Datos y Eventos
 
-Este documento traza el ciclo de vida completo de un mensaje desde que un cliente escribe por WhatsApp hasta que recibe la respuesta de la IA.
+## 1. Recepción y Procesamiento de Mensajes (Inbound)
 
-## Ciclo de Vida de un Mensaje (WhatsApp a IA)
+El flujo crítico del sistema es la recepción de un mensaje de WhatsApp y su respuesta. Este proceso está optimizado para la máxima fiabilidad y baja latencia.
 
 ```mermaid
 sequenceDiagram
-    participant User as Cliente (WhatsApp)
+    participant User as Cliente WhatsApp
     participant Meta as Meta Cloud API
-    participant Webhook as Express Webhook
-    participant Redis as BullMQ (Redis)
-    participant Worker as Meta Worker
+    participant Webhook as Express API (Webhook)
+    participant Redis as Redis (Idempotencia)
+    participant Queue as BullMQ (Redis)
+    participant Worker as Worker Node
     participant DB as PostgreSQL (Prisma)
-    participant RAG as Sistema RAG
-    participant OpenAI as OpenAI LLM
-    participant Socket as Socket.io (Next.js)
+    participant Guard as FeatureGuard
+    participant OpenAI as OpenAI API
 
-    User->>Meta: Envía "Hola, quiero info"
-    Meta->>Webhook: POST /api/webhooks/meta (Payload JSON)
+    User->>Meta: Envía mensaje
+    Meta->>Webhook: HTTP POST /api/webhooks/meta
+    Webhook->>Redis: SETNX processed_msg:id (Evita duplicados)
+    alt Es duplicado
+        Webhook-->>Meta: 200 OK (Descartado)
+    else Es nuevo
+        Webhook->>Queue: Encola el mensaje
+        Webhook-->>Meta: 200 OK (Aceptado y diferido)
+    end
+
+    Queue->>Worker: Desencola job
+    Worker->>DB: getOrCreateSession()
     
-    Webhook->>Redis: Verifica Idempotencia (SETNX)
-    Webhook->>Redis: job.add('meta-messages', payload)
-    Webhook-->>Meta: 200 OK (Inmediato)
-    
-    Redis-->>Worker: Extrae Job de la cola
-    Worker->>DB: Busca ChannelConnection (receiverId)
-    Worker->>DB: Obtiene o crea Session
-    Worker->>DB: Guarda Message (role: user)
-    Worker->>Socket: Emit 'new_message' (UI update)
-    
-    alt Sesión en HUMAN_CONTROL
-        Worker-->>Worker: Aborta IA
-    else Presupuesto excedido
-        Worker-->>User: Mensaje de error de mantenimiento
-    else Flujo Normal IA
-        Worker->>DB: Obtiene últimas 15 interacciones (Historial)
-        Worker->>RAG: searchSimilarChunks(texto_usuario)
-        RAG->>OpenAI: createEmbedding(texto_usuario)
-        RAG->>DB: Búsqueda Vectorial + BM25 (RRF)
-        RAG-->>Worker: Fragmentos de conocimiento relevantes
+    Worker->>Guard: canExecute('conversations')
+    Guard->>DB: Consulta PlanFeature y Consumption actual
+    alt Límite Excedido y Overage = HARD_LIMIT
+        Guard-->>Worker: Denegado
+        Worker-->>User: "Sistema en mantenimiento" (Vía Meta)
+    else Permitido (Dentro de límites o METERED_BILLING)
+        Guard-->>Worker: Permitido
         
-        Worker->>OpenAI: generateAIResponse(historial, chunks_RAG)
-        OpenAI-->>Worker: Respuesta de la IA
+        Worker->>DB: Recupera historial reciente (RAG contextual)
+        Worker->>DB: Búsqueda Vectorial (pgvector)
+        DB-->>Worker: Retorna Chunks relevantes
+        Worker->>OpenAI: generateAIResponse(Context + History + Prompt)
+        OpenAI-->>Worker: Respuesta generada
         
-        Worker->>DB: Guarda Message (role: assistant)
-        Worker->>Socket: Emit 'new_message' (UI update)
-        
-        Worker->>Meta: POST /messages (Graph API)
-        Meta-->>User: Recibe respuesta en WhatsApp
+        Worker->>Guard: trackConsumption('openai_tokens', amount)
+        Guard->>DB: Actualiza tabla Consumption
+        Worker->>Meta: Envía respuesta final (POST /messages)
+        Meta-->>User: Recibe respuesta
     end
 ```
 
-### Explicaciones de los pasos clave
+## 2. Flujo de Billing (Webhooks de Pago)
 
-1. **Idempotencia (`SETNX`)**: Meta reintenta los webhooks si hay fallos de red. Para evitar respuestas duplicadas, usamos `Redis SETNX` con el ID único del mensaje que provee Meta. Si ya existe, se descarta silenciosamente.
-2. **ChannelConnection Resolution**: El worker busca a qué comercio pertenece el número de WhatsApp receptor. Si un mensaje llega pero no hay conexión en la base de datos (por error de tipeo en el ID, por ejemplo), el worker lo descarta con error.
-3. **Control de Contexto (Windowing)**: Solo enviamos a OpenAI los últimos 15 mensajes de la sesión para ahorrar tokens y evitar el desbordamiento de la ventana de contexto.
-4. **Handoff (Control Humano)**: El chequeo de estado de la sesión (`HUMAN_CONTROL`) se hace en el worker *antes* de llamar al RAG o a OpenAI, garantizando que el bot no se entrometa si un humano está al mando.
+Este diagrama ilustra cómo el PaymentEngine maneja los cobros y actualizaciones de suscripción de forma agnóstica.
+
+```mermaid
+sequenceDiagram
+    participant Stripe as Proveedor (Stripe/Redsys)
+    participant API as Express API (Webhook)
+    participant Engine as PaymentEngine
+    participant Provider as StripeProvider
+    participant DB as PostgreSQL (Prisma)
+
+    Stripe->>API: POST /api/billing/webhook
+    API->>Engine: processWebhook(body, signature)
+    Engine->>Provider: handleWebhook()
+    Provider-->>Engine: Devuelve PaymentEvent normalizado
+    
+    API->>DB: Check Idempotencia (BillingEvent.providerEventId)
+    alt Ya procesado
+        API-->>Stripe: 200 OK
+    else Nuevo Evento
+        API->>DB: Upsert Subscription status y Fechas
+        API->>DB: Crea registro de auditoría (BillingEvent)
+        API-->>Stripe: 200 OK
+    end
+```

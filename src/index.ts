@@ -4,6 +4,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import IORedis from 'ioredis';
 import { verifyWebhook, receiveMessage } from './webhooks/meta';
+import billingRoutes from './billing/routes';
 
 dotenv.config();
 
@@ -37,6 +38,10 @@ app.use('/api/', limiter);
 // Rutas de Webhook de Meta
 app.get('/api/webhooks/meta', verifyWebhook);
 app.post('/api/webhooks/meta', receiveMessage);
+
+// Rutas de Billing y Planes
+app.use('/api/billing', billingRoutes);
+app.use('/api/admin', billingRoutes); // En producción iría en su propio router
 
 app.get('/health', (req, res) => {
   res.status(200).send('OK');

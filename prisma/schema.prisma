@@ -39,13 +39,13 @@ model Commerce {
   aiModel          String        @default("gpt-4o-mini")
   aiTemperature    Float         @default(0.7)
   aiMaxTokens      Int           @default(500)
-  // Facturación y Monetización
-  stripeCustomerId       String?       @unique
-  stripeSubscriptionId   String?       @unique
+  // Facturación y Monetización (Multi-Provider)
+  billingProvider        String?       // "STRIPE", "REDSYS", etc.
+  billingCustomerId      String?       @unique
+  billingSubscriptionId  String?       @unique
   subscriptionStatus     String        @default("INACTIVE") // INACTIVE, ACTIVE, PAST_DUE, CANCELED
-  isLifetimeFree         Boolean       @default(false) // Para la empresa amiga
-  monthlyTokenBudget     Int           @default(100000) // Límite de tokens por mes
-  tokensUsedThisMonth    Int           @default(0) // Contador mensual
+  providerMetadata       Json?
+  overageBehavior        String        @default("HARD_LIMIT") // "HARD_LIMIT" o "METERED_BILLING"
   onboardingCompleted    Boolean       @default(false)
 
   createdAt        DateTime      @default(now())
@@ -56,6 +56,10 @@ model Commerce {
   insights         Insight[]
   semanticCaches   SemanticCache[]
   channelConnections ChannelConnection[]
+  
+  subscriptions    Subscription[]
+  consumptions     Consumption[]
+  invoices         Invoice[]
 }
 
 model ChannelConnection {
@@ -202,4 +206,92 @@ model SemanticCache {
   commerce   Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
 
   @@index([commerceId])
+}
+
+// ==========================================
+// BILLING DOMAIN
+// ==========================================
+
+model Plan {
+  id                    String   @id @default(uuid())
+  name                  String
+  description           String?
+  status                String   @default("ACTIVE") // ACTIVE, ARCHIVED, BETA
+  monthlyPrice          Float
+  annualPrice           Float
+  currency              String   @default("EUR")
+  providerPriceId       String?  // Ej: price_1xxx
+  providerAnnualPriceId String?  // Ej: price_1yyy
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  features              PlanFeature[]
+  subscriptions         Subscription[]
+}
+
+model PlanFeature {
+  id          String @id @default(uuid())
+  planId      String
+  featureKey  String // ej. "max_conversations", "whatsapp_enabled"
+  value       String // "1000", "true", "UNLIMITED"
+  plan        Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  
+  @@unique([planId, featureKey])
+  @@index([planId])
+}
+
+model Subscription {
+  id                    String   @id @default(uuid())
+  commerceId            String   @unique
+  planId                String
+  status                String   // ACTIVE, PAST_DUE, CANCELED, INCOMPLETE
+  billingInterval       String   @default("month") // month, year
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  plan                  Plan     @relation(fields: [planId], references: [id])
+  commerce              Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+}
+
+model Consumption {
+  id             String   @id @default(uuid())
+  commerceId     String
+  metricKey      String   // "conversations", "openai_tokens", "documents"
+  periodStart    DateTime
+  periodEnd      DateTime
+  amount         Int      @default(0)
+  updatedAt      DateTime @updatedAt
+  
+  commerce       Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+  
+  @@unique([commerceId, metricKey, periodStart])
+  @@index([commerceId])
+}
+
+model Invoice {
+  id             String   @id @default(uuid())
+  commerceId     String
+  providerInvoiceId String @unique
+  amountDue      Float
+  amountPaid     Float
+  currency       String   @default("EUR")
+  status         String   // DRAFT, OPEN, PAID, UNCOLLECTIBLE, VOID
+  invoicePdfUrl  String?
+  createdAt      DateTime @default(now())
+  
+  commerce       Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+  
+  @@index([commerceId])
+}
+
+model BillingEvent {
+  id             String   @id @default(uuid())
+  providerEventId String  @unique // Para idempotencia estricta de webhooks
+  provider       String   // "STRIPE", "REDSYS"
+  eventType      String
+  payload        Json
+  processedAt    DateTime @default(now())
 }

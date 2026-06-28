@@ -2,97 +2,98 @@
 
 El sistema utiliza PostgreSQL como motor de base de datos principal, interactuando con él a través de **Prisma ORM**. Se hace uso intensivo de la extensión `pgvector` para las funcionalidades de Inteligencia Artificial (Búsqueda Vectorial y Caché Semántica).
 
-## Diagrama Entidad-Relación (ER)
+## 1. Diagrama de Entidad-Relación (ER)
 
 ```mermaid
 erDiagram
     Commerce ||--o{ User : "tiene"
     Commerce ||--o{ ChannelConnection : "configura"
-    Commerce ||--o{ Session : "aloja"
     Commerce ||--o{ KnowledgeSource : "posee"
+    Commerce ||--o{ Session : "gestiona"
     Commerce ||--o{ SemanticCache : "almacena"
+    Commerce ||--o{ Subscription : "contrata"
+    Commerce ||--o{ Consumption : "registra uso"
+    Commerce ||--o{ Invoice : "recibe"
 
-    ChannelConnection ||--o{ Session : "canaliza"
+    KnowledgeSource ||--o{ DocumentChunk : "se divide en"
     
     Session ||--o{ Message : "contiene"
+    ChannelConnection ||--o{ Session : "enruta"
     
-    KnowledgeSource ||--o{ DocumentChunk : "se divide en"
+    Plan ||--o{ PlanFeature : "define límites"
+    Plan ||--o{ Subscription : "se asigna a"
 
     Commerce {
-        String id PK
-        String name
-        Json businessHours
-        String systemPrompt
-        Int monthlyTokenBudget
-        Int tokensUsedThisMonth
+        string id PK
+        string name
+        string billingProvider
+        string billingCustomerId
+        string billingSubscriptionId
+        string subscriptionStatus
+        string overageBehavior
     }
 
     User {
-        String id PK
-        String email
-        String role
+        string id PK
+        string email
+        string role
     }
 
     ChannelConnection {
-        String id PK
-        Enum provider
-        String accessToken "Encrypted"
-        String channelAccountId "WABA ID"
-        String channelPhoneId "WhatsApp Phone ID"
-        Enum status
+        string id PK
+        string provider
+        string status
     }
 
-    Session {
-        String id PK
-        String customerIdentifier
-        String status "ACTIVE | HUMAN_CONTROL"
+    Plan {
+        string id PK
+        string name
+        float monthlyPrice
+        string providerPriceId
     }
 
-    Message {
-        String id PK
-        String role "user | assistant | system"
-        String content
-        DateTime createdAt
+    PlanFeature {
+        string id PK
+        string featureKey
+        string value
     }
 
-    KnowledgeSource {
-        String id PK
-        String name
-        String content
+    Subscription {
+        string id PK
+        string status
+        datetime currentPeriodStart
+        datetime currentPeriodEnd
     }
 
-    DocumentChunk {
-        String id PK
-        String content
-        Vector embedding
-    }
-
-    SemanticCache {
-        String id PK
-        String queryHash
-        Vector embedding
-        String response
+    Consumption {
+        string id PK
+        string metricKey
+        int amount
+        datetime periodStart
     }
 ```
 
-## Entidades Principales
+## 2. Descripción del Dominio de Facturación (Billing)
 
-### `Commerce` (Multi-Tenancy)
-Es la entidad raíz. Define un negocio (tenant). Todas las entidades operacionales cuelgan directa o indirectamente de un `Commerce`. Si se elimina un `Commerce` (`onDelete: Cascade`), se elimina absolutamente todo su ecosistema (sesiones, conocimiento, conexiones, usuarios).
-- **Control de Gasto**: Contiene los campos `monthlyTokenBudget` y `tokensUsedThisMonth` para limitar el uso de OpenAI.
+El sistema de facturación ha sido diseñado para ser completamente multi-provider y guiado por datos (Data-Driven), eliminando el código estático ("if plan == X").
 
-### `ChannelConnection`
-Representa la integración de un comercio con un canal de comunicación (ej. META para WhatsApp).
-- Almacena credenciales de forma cifrada (AES-256) en `accessToken`.
-- Para Meta, `channelAccountId` es el ID de la cuenta de WABA (WhatsApp Business Account) o de la Página, y `channelPhoneId` es el ID numérico del teléfono (este campo es clave para cruzar el webhook con el comercio correcto).
+- **Plan**: Representa un producto comercial (ej. "Pro Mensual"). Define el precio (para ser creado en Stripe/Redsys) y un identificador.
+- **PlanFeature**: Es la piedra angular del sistema. Son pares Clave-Valor que dictan las capacidades de un plan (ej. `max_conversations = 1000`, `whatsapp_enabled = true`). Esto permite crear nuevos planes desde el Dashboard de administración sin necesidad de añadir columnas nuevas a la base de datos ni desplegar código.
+- **Subscription**: Vincula un comercio con un Plan durante un periodo de tiempo.
+- **Consumption**: Rastrea el uso de métricas específicas (ej. tokens de OpenAI, conversaciones) durante el periodo de facturación actual. El `FeatureGuard` lee esta tabla en cada mensaje para validar los límites en tiempo real.
+- **BillingEvent**: (Omitido del diagrama por simplicidad). Funciona como un Log Inmutable de cada Webhook recibido del proveedor de pago, utilizando el `providerEventId` para bloquear el doble procesamiento de webhooks repetidos por fallos de red.
 
-### `Session` y `Message`
-- `Session` representa una conversación continua con un cliente único (`customerIdentifier`). Las sesiones tienen un `status` que determina si la IA responde (`ACTIVE`) o si un humano ha tomado el control (`HUMAN_CONTROL`).
-- `Message` es el historial de chat inmutable. Almacena si lo escribió el usuario (`role: "user"`), la IA o el humano (`role: "assistant"`), o el sistema (`role: "system"`).
+## 3. Descripción de Entidades del Negocio Core
 
-### `KnowledgeSource` y `DocumentChunk` (RAG)
-- `KnowledgeSource` es el documento original subido por el dueño (un texto, un PDF).
-- `DocumentChunk` representa los fragmentos (trozos) en los que se dividió el documento. Contiene un vector numérico de 1536 dimensiones (`embedding`) generado por OpenAI (`text-embedding-3-small`), necesario para la búsqueda de similitud.
+### Commerce (Tenant Central)
+El nodo central del sistema B2B. Todas las queries de la aplicación web y de los workers deben filtrar obligatoriamente por `commerceId` para garantizar la segregación de datos. 
+**Gestión de Overage:** Incluye el campo `overageBehavior` que permite al cliente decidir si desea apagar su bot al superar el límite (`HARD_LIMIT`) o permitir que siga funcionando y pagar la diferencia (`METERED_BILLING`).
 
-### `SemanticCache`
-Actúa como un firewall de costes para OpenAI. Cuando un usuario hace una pregunta, calculamos el hash y el embedding de la misma. Si encontramos una pregunta semánticamente idéntica (distancia de coseno mínima) en la caché, devolvemos la respuesta precalculada en lugar de llamar a OpenAI, ahorrando tiempo y dinero.
+### ChannelConnection
+Almacena las credenciales y el estado de la conexión con plataformas de mensajería (ej. WhatsApp, Telegram). Las contraseñas y tokens sensibles (`accessToken`) se almacenan cifrados simétricamente (AES-256).
+
+### KnowledgeSource & DocumentChunk
+Soporte para el RAG. `KnowledgeSource` es el documento original (un PDF, un texto, una web), y `DocumentChunk` son los fragmentos vectorizados tras pasar por el TextSplitter de LangChain.
+
+### Session & Message
+Modelan la conversación. Una `Session` agrupa los mensajes entre un Comercio y un Cliente final (Customer) a través de un canal concreto. Solo los mensajes recientes (ventana de contexto) se envían al LLM para ahorrar tokens.

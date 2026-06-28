@@ -11,7 +11,12 @@ En la carpeta `tests/unit/`:
 - **Utilidades criptográficas**: Se debe verificar siempre que `encrypt()` y `decrypt()` sean reversibles y robustos, ya que custodian tokens de acceso ajenos.
 - **RAG & Chunking**: Asegurarnos de que el `TextSplitter` corta correctamente en los saltos de párrafo y no a mitad de una palabra o SKU crítico.
 
-### 2. Tests de Integración (Supertest)
+### 2. Tests de Dominio y Billing (Vitest)
+El core de validación de límites y pagos debe estar testeado al 100%. Usamos Vitest para ello (`src/test/billing/`):
+- **`FeatureGuard.test.ts`**: Verifica que se bloquea el acceso si el plan está consumido (`HARD_LIMIT`) o se permite si tiene la configuración de cobro por uso (`METERED_BILLING`).
+- **`PaymentEngine.test.ts`**: Verifica el Patrón Adapter, garantizando que StripeProvider (u otros proveedores futuros) es instanciado y se delegan los métodos correctamente sin romper el Inversion of Control.
+
+### 3. Tests de Integración (Supertest)
 En la carpeta `tests/integration/`:
 - **Protección de Tenancy**: Asegurar que una petición a `/api/sessions` inyectando un token manipulado de un `commerceId` en el que no se tienen permisos devuelva siempre un `403 Forbidden` o `404 Not Found`.
 

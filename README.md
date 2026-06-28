@@ -59,10 +59,16 @@ Si acabas de unirte al proyecto, empieza por aquí:
 - **Checklists para Despliegues Seguros:**
   - [Release](./docs/checklists/release.md) | [Seguridad](./docs/checklists/security.md) | [Despliegue](./docs/checklists/deployment.md) | [Base de Datos](./docs/checklists/database.md)
 
-### 🔮 Futuro
+### 🔮 Futuro y Estrategia
 - [Roadmap Técnico](./docs/roadmap.md)
 - [Guía de Contribución](./docs/CONTRIBUTING.md)
 - [Registro de Cambios (Changelog)](./docs/CHANGELOG.md)
 
----
-*Hecho con ❤️ para que el conocimiento resida en el repositorio y no solo en la cabeza de los desarrolladores.*
+## 🚀 Novedades: Billing Engine Multi-Provider
+
+El sistema ha sido actualizado recientemente con una arquitectura completa de monetización SaaS B2B:
+- **Motor de Planes Dinámicos:** Configura precios y límites desde un panel UI sin tocar código.
+- **Payment Engine (Strategy Pattern):** Soporta Stripe nativamente y está arquitectónicamente blindado para soportar Redsys u otros PSP con un simple adaptador.
+- **FeatureGuard:** Middleware centralizado para validación estricta de límites (Hard limits) o cobro por uso (Overage/Metered Billing).
+
+Lee más sobre esto en el [ADR del Payment Engine](./docs/adr/0005-payment-engine-strategy.md) y en [Decisiones de Negocio](./docs/product/business-model.md).

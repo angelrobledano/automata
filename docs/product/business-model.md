@@ -14,20 +14,15 @@ Campos críticos para el negocio:
 - `subscriptionStatus`: Define si el servicio está activo, impagado o cancelado.
 - `isLifetimeFree`: Un flag de gracia (booleano) implementado para "comercios amigos" o betas, que bypasea temporalmente las restricciones de facturación.
 
-## 2. Economía Unit Flow (Tokens y Costes)
+## 2. Motor de Planes (Configurabilidad B2B)
 
-El principal gasto operativo de este sistema son las llamadas a la API de OpenAI. Para evitar que un usuario malintencionado de WhatsApp agote el presupuesto del sistema (Ataques de Denegación de Billetera / DoW), se implementó un sistema estricto de control de tokens.
+El sistema ha abandonado el modelo tradicional de planes programados (hardcoded). En su lugar, utilizamos un **Motor de Planes Dinámico** (Feature Flags).
 
-### Presupuestos (`Token Budgeting`)
-1. **Asignación Mensual**: Cada comercio recibe un `monthlyTokenBudget` (ej. 100,000 tokens) según su plan de suscripción.
-2. **Consumo en Tiempo Real**: Durante el procesamiento en `worker.ts`, se cuentan o estiman los tokens ingeridos (Prompt + RAG Context) y los generados (Completion). 
-3. **Descuento Inmediato**: Se incrementa el contador `tokensUsedThisMonth` del comercio.
-
-### Límite Excedido (Hard Cap)
-Cuando un comercio supera su presupuesto:
-- El sistema **bloquea la llamada a OpenAI** inmediatamente (no se genera gasto).
-- El worker inyecta un mensaje fallback de "Mantenimiento Temporal" y lo envía al usuario de WhatsApp.
-- El dueño del comercio debe hacer un "up-sell" a un plan superior para restaurar el servicio.
+- **Planes Dinámicos**: Los administradores de la plataforma pueden crear planes (Ej: "Starter", "Pro") directamente desde un Dashboard.
+- **Límites como Capacidades**: Cada plan tiene una lista de `PlanFeature` (ej. `max_conversations = 100`, `whatsapp_enabled = true`). Esto permite cambiar los límites o habilitar nuevos canales sin desplegar código nuevo.
+- **Overage Behavior (Control de Exceso)**: Una característica clave para la confianza B2B. Cuando un cliente agota su presupuesto de IA (Tokens o Conversaciones), el sistema ofrece dos vías, elegibles por el cliente:
+  1. **HARD_LIMIT**: El bot se desactiva hasta el próximo ciclo de facturación. Cero sorpresas en la factura.
+  2. **METERED_BILLING**: El bot sigue funcionando y se cobra el excedente (Overage) a final de mes.
 
 ## 3. Caché Semántica como Ventaja Competitiva
 
