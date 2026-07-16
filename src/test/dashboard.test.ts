@@ -27,7 +27,7 @@ describe('Dashboard Inbox Module', () => {
   it('debería recuperar las sesiones de un comercio para el Inbox', async () => {
     const sessions = await getInboxSessions('commerce-1');
     expect(sessions).toHaveLength(2);
-    expect(sessions[0].status).toBe('HUMAN_REQUESTED');
+    expect(sessions?.[0]?.status).toBe('HUMAN_REQUESTED');
     
     // Verificamos que se llame a prisma
     const { prisma } = await import('../db/prisma');
@@ -50,7 +50,9 @@ describe('Dashboard Inbox Module', () => {
     vi.mocked((await import('../db/prisma')).prisma.session.update).mockResolvedValue({
       id: 'session-1',
       commerceId: 'c1',
-      customerPhone: '123',
+      customerIdentifier: '123',
+      channelConnectionId: 'conn-1',
+      isTest: false,
       status: 'HUMAN_REQUESTED',
       context: null,
       createdAt: new Date(),

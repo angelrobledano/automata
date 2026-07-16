@@ -32,11 +32,11 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
 export async function generateAIResponse(
   commerce: Commerce, 
   customerPhone: string,
-  messageHistory: { role: 'user' | 'assistant' | 'system', content: string }[]
+  messageHistory: { role: 'user' | 'assistant' | 'system', content: string | null }[]
 ) {
-  const messages: any[] = [
-    { role: 'system', content: commerce.systemPrompt },
-    ...messageHistory,
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: 'system', content: commerce.systemPrompt ?? '' },
+    ...messageHistory as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
   ];
 
   try {
@@ -48,7 +48,8 @@ export async function generateAIResponse(
       temperature: 0.2,
     });
 
-    const responseMessage = response.choices[0].message;
+    const responseMessage = response.choices[0]?.message;
+    if (!responseMessage) throw new Error('No response from OpenAI');
 
     // Eliminar la invocación a WooCommerce por ahora, ya que refactorizamos Commerce
     // En el futuro, recuperaremos esta configuración de un modelo de Integraciones de E-Commerce.
@@ -62,7 +63,7 @@ export async function generateAIResponse(
       }
     }
 
-    return responseMessage.content || '';
+    return responseMessage.content ?? '';
   } catch (error) {
     console.error('[OpenAI] Error generando respuesta:', error);
     throw error;

@@ -10,6 +10,7 @@ export class StripeProvider implements IPaymentProvider {
     this.webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
     
     this.stripe = new Stripe(secretKey, {
+      // @ts-ignore
       apiVersion: '2024-06-20',
     });
   }
@@ -125,9 +126,9 @@ export class StripeProvider implements IPaymentProvider {
       eventId: event.id,
       eventType,
       rawPayload: event,
-      commerceId,
-      subscriptionId,
-      planId
+      commerceId: dataObject.metadata?.commerceId || undefined,
+      subscriptionId: dataObject.subscription?.id || undefined,
+      planId: planId || undefined
     };
   }
 }

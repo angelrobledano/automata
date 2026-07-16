@@ -10,9 +10,9 @@ export interface PaymentEvent {
   eventId: string; // Used for idempotency
   eventType: 'SUBSCRIPTION_CREATED' | 'SUBSCRIPTION_UPDATED' | 'SUBSCRIPTION_CANCELLED' | 'PAYMENT_SUCCEEDED' | 'PAYMENT_FAILED';
   rawPayload: any;
-  commerceId?: string;
-  subscriptionId?: string;
-  planId?: string;
+  commerceId?: string | undefined;
+  subscriptionId?: string | undefined;
+  planId?: string | undefined;
 }
 
 export interface IPaymentProvider {

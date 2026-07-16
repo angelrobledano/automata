@@ -18,15 +18,15 @@ interface OnboardingStatus {
 export function OnboardingWidget() {
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('onboardingDismissed') === 'true';
+    }
+    return false;
+  });
 
   useEffect(() => {
-    // Check if user previously dismissed the widget after completing it
-    const isDismissed = localStorage.getItem('onboardingDismissed') === 'true';
-    if (isDismissed) {
-      setDismissed(true);
-      return;
-    }
+    if (dismissed) return;
 
     fetch('/api/onboarding/status')
       .then(res => res.json())

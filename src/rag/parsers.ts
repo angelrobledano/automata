@@ -23,9 +23,11 @@ export function parseExcel(buffer: Buffer): string {
   
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
-    // Convierte cada hoja a formato CSV (texto crudo separado por comas)
-    const csv = xlsx.utils.sheet_to_csv(sheet);
-    text += `\n--- Sheet: ${sheetName} ---\n${csv}`;
+    if (sheet) {
+      // Convierte cada hoja a formato CSV (texto crudo separado por comas)
+      const csv = xlsx.utils.sheet_to_csv(sheet);
+      text += `\n--- Sheet: ${sheetName} ---\n${csv}`;
+    }
   }
   
   return text;

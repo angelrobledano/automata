@@ -43,7 +43,9 @@ export async function createEmbedding(text: string): Promise<number[]> {
       model: 'text-embedding-3-small',
       input: text,
     });
-    embedding = response.data[0].embedding;
+    const e = response.data[0]?.embedding;
+    if (!e) throw new Error('No embedding from OpenAI');
+    embedding = e;
   }
 
   // PgVector schema is strictly vector(1536) for OpenAI. 

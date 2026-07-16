@@ -50,8 +50,8 @@ describe('RAG Module (Generación Aumentada por Recuperación)', () => {
     const results = await searchSimilarChunks('commerce-1', '¿vendéis tartas?', 3);
     
     expect(results).toHaveLength(1);
-    expect(results[0].content).toContain('tartas de queso');
-    expect(results[0].distance).toBeLessThan(0.1);
+    expect(results?.[0]?.content).toContain('tartas de queso');
+    expect((results?.[0] as any)?.distance).toBeLessThan(0.1);
     
     const { prisma } = await import('../db/prisma');
     expect(prisma.$queryRaw).toHaveBeenCalled();
