@@ -6,7 +6,7 @@ export class StripeProvider implements IPaymentProvider {
   private webhookSecret: string;
 
   constructor() {
-    const secretKey = process.env.STRIPE_SECRET_KEY || '';
+    const secretKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_key_for_optional_stripe';
     this.webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
     
     this.stripe = new Stripe(secretKey, {
