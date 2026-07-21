@@ -9,6 +9,7 @@
     "dev:document-worker": "tsx watch src/document-worker.ts",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:worker\" \"npm run dev:document-worker\"",
     "build": "npx prisma generate && tsc",
+    "start": "node dist/index.js",
     "start:api": "node dist/index.js",
     "start:worker": "node dist/worker.js",
     "start:docworker": "node dist/document-worker.js",
