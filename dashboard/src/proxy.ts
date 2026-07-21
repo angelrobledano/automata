@@ -4,7 +4,6 @@ import { verifyToken } from './lib/jwt';
 
 // Define rutas protegidas y públicas
 const publicRoutes = ['/login', '/register'];
-const onboardingRoutes = ['/onboarding/woo', '/onboarding/meta'];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -45,10 +44,6 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    // Comprobamos si completó el onboarding...
-    // Para no llamar a la DB en cada request en Edge, haremos que la UI redirija si intenta acceder al dashboard sin completarlo,
-    // o podemos decodificar el token si inyectamos onboardingCompleted en él.
-    // Asumiremos que si está en una ruta pública, lo mandamos al dashboard.
     if (publicRoutes.includes(pathname)) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
