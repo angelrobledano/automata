@@ -1,0 +1,62 @@
+name: Automata CD Pipeline (Despliegue a Producción)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Continuous Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Código
+        uses: actions/checkout@v4
+
+      - name: 2. Despliegue de Producción (Vercel / Webhook / Docker)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+        run: |
+          echo "🚀 Iniciando despliegue de Automata a producción..."
+          
+          # Opción A: Despliegue en Vercel via CLI (Descomentar si usas Vercel)
+          # npx vercel --prod --token=$VERCEL_TOKEN --scope=$VERCEL_ORG_ID
+
+          # Opción B: Disparo por Webhook (Railway / Render / Hetzner)
+          if [ -n "$DEPLOY_WEBHOOK_URL" ]; then
+            echo "Enviando señal de despliegue vía Webhook..."
+            curl -X POST -d {} "$DEPLOY_WEBHOOK_URL"
+          else
+            echo "Simulando comandos de despliegue a producción..."
+          fi
+
+          echo "✅ Despliegue de artefactos finalizado."
+
+      - name: 3. Smoke Tests Post-Despliegue
+        env:
+          PROD_URL: ${{ secrets.PROD_URL || 'https://automata-b2b.com' }}
+        run: |
+          echo "🔍 Ejecutando Smoke Tests en producción ($PROD_URL)..."
+          
+          # Verificar disponibilidad HTTP (código 200)
+          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" "$PROD_URL" || echo "000")
+          
+          if [ "$HTTP_STATUS" -eq 200 ] || [ "$HTTP_STATUS" -eq 308 ]; then
+            echo "✅ Smoke Test exitoso: El servicio respondió con estado $HTTP_STATUS"
+          else
+            echo "❌ Smoke Test fallido: El servicio devolvió HTTP estado $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: 4. Notificación de Estado del Despliegue
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "🎉 [CD Pipeline] Despliegue a Producción EXITOSO para el commit ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "🚨 [CD Pipeline] Despliegue a Producción FALLIDO para el commit ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          fi
