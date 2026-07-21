@@ -4,7 +4,7 @@ import { prisma } from '../../../../../../src/db/prisma';
 import { searchSimilarChunks } from '../../../../../../src/rag/index';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || 'sk-fake-key-for-build-time',
 });
 
 import { verifyToken } from '@/lib/jwt';

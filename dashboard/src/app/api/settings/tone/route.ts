@@ -3,7 +3,7 @@ import { prisma } from '../../../../../../src/db/prisma';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY || 'sk-fake-key-for-build-time'
 });
 
 export async function POST(request: Request) {
