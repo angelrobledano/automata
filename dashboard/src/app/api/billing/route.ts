@@ -19,7 +19,7 @@ export async function GET(req: Request) {
       select: {
         isLifetimeFree: true,
         subscriptionStatus: true,
-        stripeCustomerId: true,
+        billingCustomerId: true,
       }
     });
 

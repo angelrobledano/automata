@@ -48,8 +48,9 @@ describe('Billing API GET', () => {
     const { prisma } = await import('../../../../../../src/db/prisma');
     (prisma.commerce.findUnique as any).mockResolvedValue({
       id: 'commerce-123',
-      plan: 'PRO',
-      stripeCustomerId: 'cus_123',
+      isLifetimeFree: true,
+      subscriptionStatus: 'ACTIVE',
+      billingCustomerId: 'cus_123',
     });
 
     // Attacker tries to access commerce-999
@@ -62,9 +63,9 @@ describe('Billing API GET', () => {
     // DB should have been queried with commerce-123, NOT commerce-999
     expect(prisma.commerce.findUnique).toHaveBeenCalledWith({
       where: { id: 'commerce-123' },
-      select: { plan: true, stripeCustomerId: true }
+      select: { isLifetimeFree: true, subscriptionStatus: true, billingCustomerId: true }
     });
-    expect(data.plan).toBe('PRO');
+    expect(data.subscriptionStatus).toBe('ACTIVE');
   });
 
   it('should return 404 if commerce is not found', async () => {

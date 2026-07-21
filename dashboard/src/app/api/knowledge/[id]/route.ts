@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../../src/db/prisma';
+import { purgeSemanticCache } from '../../../../../../src/rag/index';
 
 import { verifyToken } from '@/lib/jwt';
 import { cookies } from 'next/headers';
@@ -43,6 +44,9 @@ export async function DELETE(
     await prisma.knowledgeSource.delete({
       where: { id: sourceId }
     });
+
+    // Purgar la caché semántica del comercio
+    await purgeSemanticCache(payload.commerceId as string);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

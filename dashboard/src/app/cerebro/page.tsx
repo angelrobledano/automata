@@ -250,25 +250,25 @@ export default function CerebroPage() {
     <div className="flex h-full font-sans overflow-hidden">
       
       {/* Columna Izquierda: Gestión de Fuentes */}
-      <div className="flex-1 overflow-y-auto p-8 bg-gray-50/50 border-r border-gray-200">
+      <div className="flex-1 overflow-y-auto p-8 bg-background/50 border-r border-border">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-2">Cerebro del Asistente 🧠</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Cerebro del Asistente 🧠</h1>
+          <p className="text-sm text-muted-foreground">
             Enseña a tu asistente cómo debe responder. Sube archivos o escribe hilos de conocimiento.
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-4 mb-6 border-b border-gray-200">
+        <div className="flex space-x-4 mb-6 border-b border-border">
           <button 
             onClick={() => { setActiveTab('upload'); setEditingSourceId(null); setThreadTitle(''); setThreadContent(''); }}
-            className={`py-3 px-4 font-medium text-sm transition-colors ${activeTab === 'upload' ? 'border-b-2 border-gray-900 text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`py-3 px-4 font-medium text-sm transition-colors ${activeTab === 'upload' ? 'border-b-2 border-gray-900 text-foreground' : 'text-muted-foreground hover:text-muted-foreground'}`}
           >
             📄 Subir Archivo
           </button>
           <button 
             onClick={() => setActiveTab('text')}
-            className={`py-3 px-4 font-medium text-sm transition-colors ${activeTab === 'text' ? 'border-b-2 border-gray-900 text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`py-3 px-4 font-medium text-sm transition-colors ${activeTab === 'text' ? 'border-b-2 border-gray-900 text-foreground' : 'text-muted-foreground hover:text-muted-foreground'}`}
           >
             ✍️ Hilo de Conocimiento (Manual)
           </button>
@@ -278,26 +278,26 @@ export default function CerebroPage() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`border-2 border-dashed rounded-3xl p-10 text-center transition-all duration-200 flex flex-col items-center justify-center bg-white
-              ${isDragging ? 'border-indigo-500 bg-indigo-50 scale-105 shadow-xl' : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/30'}`}
+            className={`border-2 border-dashed rounded-lg p-10 text-center transition-all duration-200 flex flex-col items-center justify-center bg-card
+              ${isDragging ? 'border-indigo-500 bg-primary/10 scale-105 shadow-xl' : 'border-border hover:border-indigo-300 hover:bg-primary/10/30'}`}
             onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
           >
             <motion.div 
               animate={{ y: [0, -10, 0] }} 
               transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-              className="text-5xl mb-6 opacity-90 drop-shadow-sm"
+              className="text-5xl mb-6 opacity-90 drop-shadow-none"
             >
               📄
             </motion.div>
-            <h3 className="text-xl font-extrabold text-gray-800 mb-2">Sube tus archivos aquí</h3>
-            <p className="text-sm text-gray-500 mb-8 font-medium">Soporta .PDF, .DOCX, .XLSX, .TXT y .MD</p>
+            <h3 className="text-xl font-extrabold text-foreground mb-2">Sube tus archivos aquí</h3>
+            <p className="text-sm text-muted-foreground mb-8 font-medium">Soporta .PDF, .DOCX, .XLSX, .TXT y .MD</p>
             
             <div className="mb-8 w-72 text-left">
-              <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Categoría del conocimiento</label>
+              <label className="block text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Categoría del conocimiento</label>
               <select 
                 value={uploadCategory}
                 onChange={(e) => setUploadCategory(e.target.value)}
-                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 bg-white transition-all outline-none shadow-sm cursor-pointer"
+                className="w-full border-2 border-border rounded-lg px-4 py-3 text-sm font-medium focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 bg-card transition-all outline-none shadow-none cursor-pointer"
               >
                 <option value="GENERAL">General</option>
                 <option value="POLICIES">Políticas y Envíos</option>
@@ -309,7 +309,7 @@ export default function CerebroPage() {
             <motion.label 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="relative group bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-2xl font-bold cursor-pointer transition-all shadow-lg hover:shadow-indigo-500/30 text-sm overflow-hidden"
+              className="relative group bg-primary hover:bg-primary/90 text-white px-8 py-3.5 rounded-lg font-bold cursor-pointer transition-all shadow-none hover:shadow-indigo-500/30 text-sm overflow-hidden"
             >
               <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
               <span className="relative z-10 flex items-center gap-2">Examinar archivos</span>
@@ -319,25 +319,25 @@ export default function CerebroPage() {
         )}
 
         {activeTab === 'text' && (
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-base font-bold text-gray-800 mb-4">{editingSourceId ? 'Editar Hilo' : 'Nuevo Hilo de Conocimiento'}</h3>
+          <div className="bg-card rounded-lg shadow-none border border-border p-6">
+            <h3 className="text-base font-bold text-foreground mb-4">{editingSourceId ? 'Editar Hilo' : 'Nuevo Hilo de Conocimiento'}</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Título del Hilo</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Título del Hilo</label>
                 <input 
                   type="text" 
                   value={threadTitle}
                   onChange={(e) => setThreadTitle(e.target.value)}
                   placeholder="Ej. Horarios de Apertura"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Categoría</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Categoría</label>
                 <select 
                   value={threadCategory}
                   onChange={(e) => setThreadCategory(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:border-transparent bg-card"
                 >
                   <option value="GENERAL">General</option>
                   <option value="POLICIES">Políticas y Envíos</option>
@@ -346,19 +346,19 @@ export default function CerebroPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Contenido</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Contenido</label>
                 <textarea 
                   value={threadContent}
                   onChange={(e) => setThreadContent(e.target.value)}
                   placeholder="Ej. Abrimos de lunes a viernes de 10:00 a 20:00..."
-                  className="w-full h-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-600 focus:border-transparent resize-y"
+                  className="w-full h-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-y"
                 ></textarea>
               </div>
               <div className="flex justify-end gap-2">
                 {editingSourceId && (
                   <button 
                     onClick={() => { setEditingSourceId(null); setThreadTitle(''); setThreadContent(''); }}
-                    className="px-4 py-2 rounded-lg font-medium text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                    className="px-4 py-2 rounded-lg font-medium text-sm text-muted-foreground bg-card hover:bg-gray-200 transition-colors"
                   >
                     Cancelar
                   </button>
@@ -366,7 +366,7 @@ export default function CerebroPage() {
                 <button 
                   onClick={saveTextThread}
                   disabled={isSavingText}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm disabled:opacity-50"
+                  className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-none disabled:opacity-50"
                 >
                   {isSavingText ? 'Guardando...' : (editingSourceId ? 'Actualizar Hilo' : 'Guardar Hilo')}
                 </button>
@@ -376,7 +376,7 @@ export default function CerebroPage() {
         )}
 
         {status && (
-          <div className={`mt-4 p-3 rounded-lg text-sm font-medium transition-all ${isUploading || isSavingText ? 'bg-indigo-50 text-indigo-800 border border-indigo-100' : status.includes('✅') ? 'bg-green-50 text-green-800 border border-green-100' : 'bg-red-50 text-red-800 border border-red-100'}`}>
+          <div className={`mt-4 p-3 rounded-lg text-sm font-medium transition-all ${isUploading || isSavingText ? 'bg-primary/10 text-indigo-800 border border-indigo-100' : status.includes('✅') ? 'bg-green-50 text-green-800 border border-green-100' : 'bg-red-50 text-red-800 border border-red-100'}`}>
             {(isUploading || isSavingText) && <span className="inline-block w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>}
             {status}
           </div>
@@ -384,9 +384,9 @@ export default function CerebroPage() {
 
         <div className="mt-8">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Fuentes Sincronizadas ({sources.length})</h3>
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+          <div className="bg-card border border-border rounded-lg overflow-hidden divide-y divide-gray-100">
             {sources.length === 0 && (
-               <div className="p-6 text-center text-sm text-gray-500">Tu asistente está listo para aprender. Sube tu primer PDF o escribe unas normas básicas para empezar.</div>
+               <div className="p-6 text-center text-sm text-muted-foreground">Tu asistente está listo para aprender. Sube tu primer PDF o escribe unas normas básicas para empezar.</div>
             )}
             <AnimatePresence>
               {sources.map(source => (
@@ -395,26 +395,26 @@ export default function CerebroPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="p-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-0 hover:bg-indigo-50/50 transition-colors"
+                  className="p-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-0 hover:bg-primary/10/50 transition-colors"
                 >
                   <div className="flex items-start gap-3 w-full lg:w-auto overflow-hidden">
-                    <span className="text-xl p-2 bg-white rounded-lg shadow-sm border border-gray-100 flex-shrink-0 mt-0.5">{source.type === 'TEXT' ? '✍️' : '📄'}</span>
+                    <span className="text-xl p-2 bg-card rounded-lg shadow-none border border-gray-100 flex-shrink-0 mt-0.5">{source.type === 'TEXT' ? '✍️' : '📄'}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <p className="font-bold text-sm text-gray-900 truncate" title={source.name}>{source.name}</p>
-                        <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-100 flex-shrink-0">
+                        <p className="font-bold text-sm text-foreground truncate" title={source.name}>{source.name}</p>
+                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-100 flex-shrink-0">
                           {source.category === 'POLICIES' ? 'Políticas' : source.category === 'PRODUCTS' ? 'Productos' : source.category === 'QUICK_REPLIES' ? 'Resp. Rápidas' : 'General'}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500">{new Date(source.createdAt).toLocaleDateString()} &middot; <span className="font-medium text-gray-700">{source._count?.chunks || 0} fragmentos</span></p>
+                      <p className="text-xs text-muted-foreground">{new Date(source.createdAt).toLocaleDateString()} &middot; <span className="font-medium text-muted-foreground">{source._count?.chunks || 0} fragmentos</span></p>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 w-full lg:w-auto justify-start lg:justify-end ml-12 lg:ml-0">
-                    <button onClick={() => auditSource(source)} className="text-indigo-600 bg-white border border-indigo-100 shadow-sm text-xs font-bold hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-all hover:scale-105">Auditar</button>
+                    <button onClick={() => auditSource(source)} className="text-primary bg-card border border-indigo-100 shadow-none text-xs font-bold hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-all hover:scale-105">Auditar</button>
                     {source.type === 'TEXT' && (
-                      <button onClick={() => editSource(source)} className="text-blue-600 bg-white border border-blue-100 shadow-sm text-xs font-bold hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all hover:scale-105">Editar</button>
+                      <button onClick={() => editSource(source)} className="text-primary bg-card border border-blue-100 shadow-none text-xs font-bold hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all hover:scale-105">Editar</button>
                     )}
-                    <button onClick={() => deleteSource(source.id)} className="text-red-500 bg-white border border-red-100 shadow-sm text-xs font-bold hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all hover:scale-105">Eliminar</button>
+                    <button onClick={() => deleteSource(source.id)} className="text-red-500 bg-card border border-red-100 shadow-none text-xs font-bold hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all hover:scale-105">Eliminar</button>
                   </div>
                 </motion.div>
               ))}
@@ -446,8 +446,8 @@ export default function CerebroPage() {
                     La IA ha troceado este documento en <strong>{auditChunks.length} fragmentos (chunks)</strong>. Así es exactamente como la IA "lee" y busca la información en tu base de datos antes de responder a un cliente.
                   </div>
                   {auditChunks.map((chunk, index) => (
-                    <div key={chunk.id} className="bg-background border border-border rounded-xl p-4 shadow-sm relative group transition-all hover:border-indigo-200 hover:shadow-md">
-                      <span className="absolute -top-2.5 -left-2.5 bg-foreground text-background text-[10px] font-bold w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-background shadow-sm">#{index + 1}</span>
+                    <div key={chunk.id} className="bg-background border border-border rounded-lg p-4 shadow-none relative group transition-all hover:border-indigo-200 hover:shadow-none">
+                      <span className="absolute -top-2.5 -left-2.5 bg-foreground text-background text-[10px] font-bold w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-background shadow-none">#{index + 1}</span>
                       
                       <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
                         <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-1 rounded-md">
@@ -455,7 +455,7 @@ export default function CerebroPage() {
                         </span>
                         <button 
                           onClick={() => copyChunkToClipboard(chunk.id, chunk.content)}
-                          className="p-1.5 bg-white border border-gray-200 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors shadow-sm"
+                          className="p-1.5 bg-card border border-border text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors shadow-none"
                           title="Copiar texto del fragmento"
                         >
                           {copiedChunkId === chunk.id ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
@@ -474,19 +474,19 @@ export default function CerebroPage() {
       </div>
 
       {/* Columna Derecha: Simulador Sandbox */}
-      <div className="w-[450px] flex-shrink-0 flex flex-col bg-white">
+      <div className="w-[450px] flex-shrink-0 flex flex-col bg-card">
         
         {/* Cabecera Simulador */}
-        <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+        <div className="p-4 border-b border-border bg-background flex justify-between items-center">
           <div>
-            <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500"></span> Simulador en Vivo
             </h2>
-            <p className="text-[10px] text-gray-500 font-mono mt-1">Conectado a OpenAI real</p>
+            <p className="text-[10px] text-muted-foreground font-mono mt-1">Conectado a OpenAI real</p>
           </div>
           <button 
             onClick={clearSimulation}
-            className="text-xs font-semibold text-gray-500 hover:text-red-600 transition-colors px-2 py-1 bg-white border border-gray-200 rounded shadow-sm"
+            className="text-xs font-semibold text-muted-foreground hover:text-red-600 transition-colors px-2 py-1 bg-card border border-border rounded shadow-none"
           >
             Limpiar Chat
           </button>
@@ -504,11 +504,11 @@ export default function CerebroPage() {
         )}
 
         {/* Chat Area */}
-        <div ref={chatScrollRef} className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50">
+        <div ref={chatScrollRef} className="flex-1 p-4 overflow-y-auto space-y-4 bg-background">
           <AnimatePresence>
             {simMessages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 space-y-3">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-2xl">🤖</div>
+                <div className="w-12 h-12 bg-card rounded-full flex items-center justify-center text-2xl">🤖</div>
                 <p className="text-sm">¡Pon a prueba a tu IA! Escríbele como si fueras un cliente para ver qué te responde.</p>
               </div>
             )}
@@ -522,13 +522,13 @@ export default function CerebroPage() {
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div className={`
-                  ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-white text-gray-900 border border-gray-200 shadow-sm rounded-tl-sm'}
-                  rounded-2xl px-4 py-2.5 max-w-[85%] text-sm
+                  ${msg.role === 'user' ? 'bg-primary text-white rounded-tr-sm' : 'bg-card text-foreground border border-border shadow-none rounded-tl-sm'}
+                  rounded-lg px-4 py-2.5 max-w-[85%] text-sm
                 `}>
                   {msg.role === 'user' ? (
                     <p className="whitespace-pre-wrap leading-relaxed break-words">{msg.content}</p>
                   ) : (
-                    <div className="prose prose-sm leading-relaxed max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-2 prose-strong:text-gray-900 text-gray-800 break-words">
+                    <div className="prose prose-sm leading-relaxed max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-2 prose-strong:text-foreground text-foreground break-words">
                       {msg.content ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                       ) : (
@@ -543,19 +543,19 @@ export default function CerebroPage() {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 border-t border-gray-200 bg-white">
+        <div className="p-4 border-t border-border bg-card">
           <form onSubmit={handleSimulateMessage} className="flex gap-2">
             <input 
               type="text" 
               value={simMessage}
               onChange={e => setSimMessage(e.target.value)}
               placeholder="Habla con tu bot..."
-              className="flex-1 bg-gray-50 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+              className="flex-1 bg-background border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-card transition-all"
             />
             <button 
               type="submit"
               disabled={isSimulating || !simMessage.trim()}
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white p-2.5 rounded-xl transition-colors shadow-sm"
+              className="bg-primary hover:bg-primary/90 disabled:bg-indigo-400 text-white p-2.5 rounded-lg transition-colors shadow-none"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />

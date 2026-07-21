@@ -19,7 +19,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
     if (isImage) {
       return (
         <div className="relative group">
-          <img src={content} alt="Media" className="rounded-lg max-h-48 object-cover shadow-sm" />
+          <img src={content} alt="Media" className="rounded-lg max-h-48 object-cover shadow-none" />
           <a href={content} target="_blank" rel="noreferrer" className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
@@ -200,19 +200,19 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
   const activeSession = sessions.find(s => s.id === activeSessionId);
 
   return (
-    <div className="flex h-full bg-white font-sans text-gray-900 w-full relative">
+    <div className="flex h-full bg-card font-sans text-foreground w-full relative">
       {/* Panel Izquierdo: Lista de Chats */}
-      <div className={`flex-shrink-0 border-r border-gray-200 flex-col bg-gray-50/50 
+      <div className={`flex-shrink-0 border-r border-border flex-col bg-background/50 
         ${showListOnMobile ? 'flex w-full md:w-[320px]' : 'hidden md:flex w-[320px]'}`}>
-        <div className="p-4 border-b border-gray-200 bg-white">
+        <div className="p-4 border-b border-border bg-card">
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-bold tracking-tight text-gray-900">Conversaciones</h2>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Conversaciones</h2>
           </div>
           
           <div className="flex bg-muted p-1 rounded-lg mb-3">
             <button 
               onClick={() => setActiveFilter('pending')}
-              className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeFilter === 'pending' ? 'bg-background shadow-sm text-amber-600' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeFilter === 'pending' ? 'bg-background shadow-none text-amber-600' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Pendientes
               <span className="ml-1.5 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-[10px]">
@@ -221,13 +221,13 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
             </button>
             <button 
               onClick={() => setActiveFilter('ai')}
-              className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeFilter === 'ai' ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeFilter === 'ai' ? 'bg-background shadow-none text-primary' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Autopiloto
             </button>
             <button 
               onClick={() => setActiveFilter('history')}
-              className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeFilter === 'history' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeFilter === 'history' ? 'bg-background shadow-none text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Histórico
             </button>
@@ -243,11 +243,11 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
         <div className="flex-1 overflow-y-auto">
           {filteredSessions.length === 0 ? (
             <div className="p-8 flex flex-col items-center text-center mt-10">
-              <div className="w-16 h-16 bg-white border border-gray-100 shadow-sm rounded-2xl flex items-center justify-center text-2xl mb-4">
+              <div className="w-16 h-16 bg-card border border-gray-100 shadow-none rounded-lg flex items-center justify-center text-2xl mb-4">
                 {activeFilter === 'pending' ? '🙌' : activeFilter === 'ai' ? '🤖' : '🗄️'}
               </div>
-              <h3 className="text-sm font-bold text-gray-900 mb-1">Todo al día</h3>
-              <p className="text-xs text-gray-500">
+              <h3 className="text-sm font-bold text-foreground mb-1">Todo al día</h3>
+              <p className="text-xs text-muted-foreground">
                 {activeFilter === 'pending' ? 'No hay clientes esperando a ser atendidos por un humano.' : 'No hay chats en esta categoría.'}
               </p>
             </div>
@@ -255,17 +255,17 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
             <div 
               key={session.id} 
               onClick={() => { setActiveSessionId(session.id); setShowListOnMobile(false); }}
-              className={`px-4 py-3 cursor-pointer border-b border-gray-100 transition-colors ${activeSessionId === session.id ? 'bg-indigo-50/50' : 'bg-white hover:bg-gray-50'} ${
+              className={`px-4 py-3 cursor-pointer border-b border-gray-100 transition-colors ${activeSessionId === session.id ? 'bg-primary/10/50' : 'bg-card hover:bg-background'} ${
                 session.status === 'HUMAN_REQUESTED' ? 'border-l-2 border-l-amber-500' : 'border-l-2 border-l-transparent'
               }`}
             >
               <div className="flex justify-between items-baseline mb-1">
-                <span className="font-semibold text-sm text-gray-900">{session.customerPhone}</span>
+                <span className="font-semibold text-sm text-foreground">{session.customerPhone}</span>
                 <span className="text-xs text-gray-400">
                   {new Date(session.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                 </span>
               </div>
-              <p className="text-xs text-gray-600 truncate pr-4">
+              <p className="text-xs text-muted-foreground truncate pr-4">
                 {session.messages?.[session.messages.length - 1]?.content || 'Nueva conversación...'}
               </p>
               {session.status === 'HUMAN_REQUESTED' && (
@@ -277,7 +277,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
               {session.status === 'HUMAN_CONTROL' && (
                 <div className="mt-2 flex items-center">
                   <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1.5"></span>
-                  <span className="text-[10px] uppercase font-bold text-indigo-600 tracking-wider">Atendido por ti</span>
+                  <span className="text-[10px] uppercase font-bold text-primary tracking-wider">Atendido por ti</span>
                 </div>
               )}
             </div>
@@ -286,10 +286,10 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
       </div>
 
       {/* Panel Central: El Chat */}
-      <div className={`flex-1 flex flex-col bg-white ${!showListOnMobile ? 'flex' : 'hidden md:flex'}`}>
+      <div className={`flex-1 flex flex-col bg-card ${!showListOnMobile ? 'flex' : 'hidden md:flex'}`}>
         {activeSession ? (
           <>
-            <div className="h-14 border-b border-gray-200 flex justify-between items-center px-4 md:px-6">
+            <div className="h-14 border-b border-border flex justify-between items-center px-4 md:px-6">
               <div className="flex items-center gap-3">
                 <Button 
                   variant="ghost" 
@@ -306,8 +306,8 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
                   C
                 </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-900">{activeSession.customerPhone}</h3>
-                <p className="text-xs text-gray-500 leading-none">Cliente Anónimo</p>
+                <h3 className="text-sm font-semibold text-foreground">{activeSession.customerPhone}</h3>
+                <p className="text-xs text-muted-foreground leading-none">Cliente Anónimo</p>
               </div>
             </div>
             
@@ -319,7 +319,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
                       variant={activeSession.status !== 'HUMAN_CONTROL' ? 'secondary' : 'ghost'}
                       size="sm"
                       onClick={() => handleHandoff('return_ai')}
-                      className={`h-7 px-3 text-xs font-bold ${activeSession.status !== 'HUMAN_CONTROL' ? 'bg-background shadow-sm ring-1 ring-border' : 'text-muted-foreground'}`}
+                      className={`h-7 px-3 text-xs font-bold ${activeSession.status !== 'HUMAN_CONTROL' ? 'bg-background shadow-none ring-1 ring-border' : 'text-muted-foreground'}`}
                     >
                       Reactivar bot
                     </Button>
@@ -327,7 +327,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
                       variant={activeSession.status === 'HUMAN_CONTROL' ? 'secondary' : 'ghost'}
                       size="sm"
                       onClick={() => handleHandoff('take_control')}
-                      className={`h-7 px-3 text-xs font-bold ${activeSession.status === 'HUMAN_CONTROL' ? 'text-primary bg-background shadow-sm ring-1 ring-border' : 'text-muted-foreground'}`}
+                      className={`h-7 px-3 text-xs font-bold ${activeSession.status === 'HUMAN_CONTROL' ? 'text-primary bg-background shadow-none ring-1 ring-border' : 'text-muted-foreground'}`}
                     >
                       Pausar bot y responder yo
                     </Button>
@@ -353,20 +353,20 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
             </div>
           </div>
 
-          <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-gray-50/30">
+          <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-background/30">
             {activeSession.messages?.map((msg: any, idx: number) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-start items-end gap-2' : 'justify-end items-end gap-2'}`}>
                 {msg.role === 'user' && (
-                  <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 font-bold mb-1">
+                  <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs text-muted-foreground font-bold mb-1">
                     {activeSession.customerPhone ? activeSession.customerPhone.substring(activeSession.customerPhone.length - 2) : 'C'}
                   </div>
                 )}
                 <div className={`
-                  ${msg.role === 'user' ? 'bg-gray-100 text-gray-900 rounded-tl-sm border-gray-200' : ''}
-                  ${msg.role === 'assistant' ? 'bg-indigo-600 text-white rounded-tr-sm shadow-sm' : ''}
-                  ${msg.role === 'system' ? 'bg-red-50 text-red-700 border-red-200 rounded-tr-sm shadow-sm' : ''}
-                  ${msg.role === 'internal_note' ? 'bg-yellow-50 text-yellow-900 border-yellow-200 rounded-tr-sm shadow-sm' : ''}
-                  rounded-2xl px-4 py-2.5 max-w-[70%] text-sm border
+                  ${msg.role === 'user' ? 'bg-card text-foreground rounded-tl-sm border-border' : ''}
+                  ${msg.role === 'assistant' ? 'bg-primary text-white rounded-tr-sm shadow-none' : ''}
+                  ${msg.role === 'system' ? 'bg-red-50 text-red-700 border-red-200 rounded-tr-sm shadow-none' : ''}
+                  ${msg.role === 'internal_note' ? 'bg-yellow-50 text-yellow-900 border-yellow-200 rounded-tr-sm shadow-none' : ''}
+                  rounded-lg px-4 py-2.5 max-w-[70%] text-sm border
                 `}>
                   {renderMessageContent(msg)}
                 </div>
@@ -374,7 +374,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
                   <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center text-xs mb-1">🔒</div>
                 )}
                 {msg.role !== 'user' && msg.role !== 'system' && msg.role !== 'internal_note' && (
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs mb-1">🤖</div>
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs mb-1">🤖</div>
                 )}
                 {msg.role === 'system' && (
                   <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-xs mb-1">⚠️</div>
@@ -384,8 +384,8 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
 
             {activeSession.status === 'ACTIVE' && activeSession.messages?.[activeSession.messages.length - 1]?.role === 'user' && (
               <div className="flex justify-start items-end gap-2">
-                <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs mb-1 shadow-sm">🤖</div>
-                <div className="bg-white rounded-2xl px-4 py-3.5 border border-indigo-100 shadow-sm flex items-center gap-1.5 rounded-tl-sm">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs mb-1 shadow-none">🤖</div>
+                <div className="bg-card rounded-lg px-4 py-3.5 border border-indigo-100 shadow-none flex items-center gap-1.5 rounded-tl-sm">
                   <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></span>
                   <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
                   <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
@@ -416,7 +416,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
                 </Button>
               </div>
 
-              <div className={`flex items-end gap-2 rounded-xl border focus-within:ring-2 focus-within:ring-offset-2 p-2 transition-all ${
+              <div className={`flex items-end gap-2 rounded-lg border focus-within:ring-2 focus-within:ring-offset-2 p-2 transition-all ${
                 isInternalNote 
                   ? 'bg-yellow-100/50 border-yellow-300 focus-within:border-yellow-500 focus-within:ring-yellow-500' 
                   : 'bg-muted/30 border-input focus-within:border-primary focus-within:ring-ring'
@@ -457,22 +457,22 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
               </div>
             </div>
           ) : (
-             <div className="p-4 border-t border-gray-200 bg-gray-50 text-center text-xs text-gray-500">
+             <div className="p-4 border-t border-border bg-background text-center text-xs text-muted-foreground">
                 La IA está al mando de esta conversación. Para responder manualmente, pulsa "Pausar bot y responder yo".
              </div>
           )}
         </>
       ) : (
-        <div className="flex-1 flex flex-col bg-gray-50 items-center justify-center text-center p-8">
-          <div className="w-32 h-32 bg-white rounded-full shadow-sm flex items-center justify-center mb-6 relative">
+        <div className="flex-1 flex flex-col bg-background items-center justify-center text-center p-8">
+          <div className="w-32 h-32 bg-card rounded-full shadow-none flex items-center justify-center mb-6 relative">
             <span className="text-6xl absolute">🧠</span>
-            <span className="absolute top-0 right-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-xl shadow-sm">✨</span>
+            <span className="absolute top-0 right-0 w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center text-xl shadow-none">✨</span>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Tu Inbox está tranquilo</h2>
-          <p className="text-gray-500 max-w-sm mb-8 text-sm">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Tu Inbox está tranquilo</h2>
+          <p className="text-muted-foreground max-w-sm mb-8 text-sm">
             Mientras esperas a tu primer cliente, puedes seguir entrenando al cerebro de tu IA para que sus respuestas sean impecables.
           </p>
-          <a href="/cerebro" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2 hover:-translate-y-0.5">
+          <a href="/cerebro" className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-none flex items-center gap-2 hover:-translate-y-0.5">
             <span>Añadir Conocimiento</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />

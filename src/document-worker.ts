@@ -5,7 +5,7 @@ import { prisma } from './db/prisma';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { createEmbedding } from './rag/index';
+import { createEmbedding, purgeSemanticCache } from './rag/index';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 // @ts-ignore
 import { LlamaParseReader } from 'llamaindex';
@@ -90,6 +90,7 @@ const worker = new Worker('document-processing', async job => {
       `;
     }
 
+    await purgeSemanticCache(commerceId);
     console.log(`[DocumentWorker] Documento ${filename} indexado con éxito.`);
   } catch (error) {
     console.error(`[DocumentWorker] Error procesando ${filename}:`, error);

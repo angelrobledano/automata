@@ -55,7 +55,7 @@ export default function MobileNav() {
   }
 
   return (
-    <nav id="mobile-nav" className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-safe">
+    <nav id="mobile-nav" className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 pb-safe">
       <div className="flex justify-around items-center h-16">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.path);
@@ -65,14 +65,14 @@ export default function MobileNav() {
               href={item.path} 
               className={`flex flex-col items-center justify-center w-full h-full relative ${
                 isActive 
-                ? 'text-indigo-600' 
-                : 'text-gray-500 hover:text-gray-900'
+                ? 'text-primary' 
+                : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <div className="relative">
                 <span className={`text-xl ${isActive ? 'opacity-100' : 'opacity-70 grayscale'}`}>{item.icon}</span>
                 {item.badge && (
-                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold shadow-sm">
+                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold shadow-none">
                     {item.badge}
                   </span>
                 )}

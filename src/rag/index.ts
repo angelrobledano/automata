@@ -306,3 +306,12 @@ export async function searchSimilarChunks(commerceId: string, query: string, lim
 
   return results;
 }
+
+export async function purgeSemanticCache(commerceId: string): Promise<void> {
+  console.log(`[RAG] Purgando caché semántica para comercio: ${commerceId}`);
+  await prisma.$executeRaw`
+    DELETE FROM "SemanticCache"
+    WHERE "commerceId" = ${commerceId}
+  `;
+}
+

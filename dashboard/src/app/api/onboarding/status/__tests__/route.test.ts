@@ -43,8 +43,7 @@ describe('Onboarding Status API GET', () => {
     const { prisma } = await import('../../../../../../../src/db/prisma');
     (prisma.commerce.findUnique as any).mockResolvedValue({
       id: 'comm-123',
-      waToken: null,
-      wooConsumerKey: null
+      channelConnections: []
     });
     (prisma.knowledgeSource.count as any).mockResolvedValue(0);
 
@@ -58,12 +57,13 @@ describe('Onboarding Status API GET', () => {
     expect(data.steps.whatsapp).toBe(false);
   });
 
-  it('should return 100% progress if everything is configured', async () => {
+  it('should return 67% progress if whatsapp and knowledge are configured', async () => {
     const { prisma } = await import('../../../../../../../src/db/prisma');
     (prisma.commerce.findUnique as any).mockResolvedValue({
       id: 'comm-123',
-      waToken: 'token',
-      wooConsumerKey: 'key'
+      channelConnections: [
+        { provider: 'META', status: 'CONNECTED' }
+      ]
     });
     (prisma.knowledgeSource.count as any).mockResolvedValue(5);
 
@@ -71,9 +71,9 @@ describe('Onboarding Status API GET', () => {
     const res = await GET(req);
     const data = await res.json();
 
-    expect(data.progress).toBe(100);
+    expect(data.progress).toBe(67);
     expect(data.steps.knowledge).toBe(true);
-    expect(data.steps.ecommerce).toBe(true);
+    expect(data.steps.ecommerce).toBe(false);
     expect(data.steps.whatsapp).toBe(true);
   });
 });

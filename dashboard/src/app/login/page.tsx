@@ -38,38 +38,38 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-3xl shadow-xl border border-slate-100">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-md w-full space-y-8 bg-card p-10 rounded-lg shadow-xl border border-slate-100">
         <div>
-          <h2 className="text-center text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-center text-3xl font-extrabold text-foreground tracking-tight">
             Bienvenido de nuevo
           </h2>
-          <p className="mt-2 text-center text-sm text-slate-600">
+          <p className="mt-2 text-center text-sm text-muted-foreground">
             O{' '}
-            <Link href="/register" className="font-bold text-indigo-600 hover:text-indigo-500">
+            <Link href="/register" className="font-bold text-primary hover:text-indigo-500">
               crea una cuenta gratis
             </Link>
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div className="rounded-md shadow-sm space-y-4">
+          <div className="rounded-md shadow-none space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Email</label>
               <input
                 type="email"
                 required
-                className="appearance-none relative block w-full px-4 py-3 border border-slate-300 placeholder-slate-400 text-slate-900 rounded-xl focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="appearance-none relative block w-full px-4 py-3 border border-slate-300 placeholder-slate-400 text-foreground rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 placeholder="tu@empresa.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Contraseña</label>
               <input
                 type="password"
                 required
-                className="appearance-none relative block w-full px-4 py-3 border border-slate-300 placeholder-slate-400 text-slate-900 rounded-xl focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="appearance-none relative block w-full px-4 py-3 border border-slate-300 placeholder-slate-400 text-foreground rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -87,7 +87,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors shadow-md shadow-indigo-200"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-lg text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors shadow-none shadow-indigo-200"
             >
               {loading ? 'Entrando...' : 'Entrar al Panel'}
             </button>

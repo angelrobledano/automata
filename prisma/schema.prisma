@@ -47,6 +47,7 @@ model Commerce {
   providerMetadata       Json?
   overageBehavior        String        @default("HARD_LIMIT") // "HARD_LIMIT" o "METERED_BILLING"
   onboardingCompleted    Boolean       @default(false)
+  isLifetimeFree         Boolean       @default(false)
 
   createdAt        DateTime      @default(now())
   sessions         Session[]

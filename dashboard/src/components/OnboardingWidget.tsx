@@ -59,12 +59,12 @@ export function OnboardingWidget() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white border-2 border-indigo-100 rounded-2xl p-6 md:p-8 mb-8 shadow-sm relative overflow-hidden"
+        className="bg-card border-2 border-indigo-100 rounded-lg p-6 md:p-8 mb-8 shadow-none relative overflow-hidden"
       >
         {isComplete && (
           <button 
             onClick={handleDismiss}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none"
+            className="absolute top-4 right-4 text-gray-400 hover:text-muted-foreground focus:outline-none"
             aria-label="Cerrar widget"
           >
             <X className="w-5 h-5" />
@@ -78,7 +78,7 @@ export function OnboardingWidget() {
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
               <path className="text-gray-100" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
               <motion.path 
-                className="text-indigo-600" 
+                className="text-primary" 
                 strokeWidth="4" 
                 stroke="currentColor" 
                 fill="none" 
@@ -101,10 +101,10 @@ export function OnboardingWidget() {
           </div>
 
           <div className="flex-1 w-full">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl font-bold text-foreground mb-2">
               {isComplete ? '¡Enhorabuena! Asistente configurado al 100%' : '¡Tu asistente necesita entrenamiento!'}
             </h2>
-            <p className="text-gray-600 mb-6 text-sm">
+            <p className="text-muted-foreground mb-6 text-sm">
               {isComplete 
                 ? 'Has completado todos los pasos clave. Tu IA está lista para atender clientes y generar ventas.'
                 : 'Completa estos 3 sencillos pasos para desbloquear todo el potencial de la IA y empezar a automatizar tu negocio en piloto automático.'}
@@ -116,16 +116,16 @@ export function OnboardingWidget() {
               <Link 
                 href="/cerebro" 
                 onClick={() => handleStepClick('knowledge')}
-                className={`flex flex-col p-4 rounded-xl border relative transition-all group ${
-                  status.steps.knowledge ? 'bg-green-50/50 border-green-200 opacity-80 hover:opacity-100' : 'bg-white border-gray-200 hover:border-indigo-400 hover:shadow-md cursor-pointer'
+                className={`flex flex-col p-4 rounded-lg border relative transition-all group ${
+                  status.steps.knowledge ? 'bg-green-50/50 border-green-200 opacity-80 hover:opacity-100' : 'bg-card border-border hover:border-indigo-400 hover:shadow-none cursor-pointer'
                 }`}
               >
                 {status.steps.knowledge && <div className="absolute top-3 right-3 text-green-500"><CheckCircle2 className="w-5 h-5" /></div>}
                 <div className="text-2xl mb-2 grayscale-0 transition-all">🧠</div>
-                <h3 className={`text-sm font-bold ${status.steps.knowledge ? 'text-green-800' : 'text-gray-900'}`}>1. Sube Conocimiento</h3>
-                <p className="text-xs text-gray-500 mt-1 mb-3 flex-1">Añade políticas o PDFs al cerebro.</p>
+                <h3 className={`text-sm font-bold ${status.steps.knowledge ? 'text-green-800' : 'text-foreground'}`}>1. Sube Conocimiento</h3>
+                <p className="text-xs text-muted-foreground mt-1 mb-3 flex-1">Añade políticas o PDFs al cerebro.</p>
                 {!status.steps.knowledge && (
-                  <span className="text-xs font-bold text-indigo-600 flex items-center gap-1 group-hover:gap-2 transition-all">
+                  <span className="text-xs font-bold text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
                     Configurar <ChevronRight className="w-3 h-3" />
                   </span>
                 )}
@@ -135,16 +135,16 @@ export function OnboardingWidget() {
               <Link 
                 href="/ajustes?tab=tienda" 
                 onClick={() => handleStepClick('ecommerce')}
-                className={`flex flex-col p-4 rounded-xl border relative transition-all group ${
-                  status.steps.ecommerce ? 'bg-green-50/50 border-green-200 opacity-80 hover:opacity-100' : 'bg-white border-gray-200 hover:border-indigo-400 hover:shadow-md cursor-pointer'
+                className={`flex flex-col p-4 rounded-lg border relative transition-all group ${
+                  status.steps.ecommerce ? 'bg-green-50/50 border-green-200 opacity-80 hover:opacity-100' : 'bg-card border-border hover:border-indigo-400 hover:shadow-none cursor-pointer'
                 }`}
               >
                 {status.steps.ecommerce && <div className="absolute top-3 right-3 text-green-500"><CheckCircle2 className="w-5 h-5" /></div>}
                 <div className="text-2xl mb-2">🛍️</div>
-                <h3 className={`text-sm font-bold ${status.steps.ecommerce ? 'text-green-800' : 'text-gray-900'}`}>2. Conecta Catálogo</h3>
-                <p className="text-xs text-gray-500 mt-1 mb-3 flex-1">Permite que recomiende productos.</p>
+                <h3 className={`text-sm font-bold ${status.steps.ecommerce ? 'text-green-800' : 'text-foreground'}`}>2. Conecta Catálogo</h3>
+                <p className="text-xs text-muted-foreground mt-1 mb-3 flex-1">Permite que recomiende productos.</p>
                 {!status.steps.ecommerce && (
-                  <span className="text-xs font-bold text-indigo-600 flex items-center gap-1 group-hover:gap-2 transition-all">
+                  <span className="text-xs font-bold text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
                     Configurar <ChevronRight className="w-3 h-3" />
                   </span>
                 )}
@@ -154,16 +154,16 @@ export function OnboardingWidget() {
               <Link 
                 href="/ajustes?tab=canales" 
                 onClick={() => handleStepClick('whatsapp')}
-                className={`flex flex-col p-4 rounded-xl border relative transition-all group ${
-                  status.steps.whatsapp ? 'bg-green-50/50 border-green-200 opacity-80 hover:opacity-100' : 'bg-white border-gray-200 hover:border-indigo-400 hover:shadow-md cursor-pointer'
+                className={`flex flex-col p-4 rounded-lg border relative transition-all group ${
+                  status.steps.whatsapp ? 'bg-green-50/50 border-green-200 opacity-80 hover:opacity-100' : 'bg-card border-border hover:border-indigo-400 hover:shadow-none cursor-pointer'
                 }`}
               >
                 {status.steps.whatsapp && <div className="absolute top-3 right-3 text-green-500"><CheckCircle2 className="w-5 h-5" /></div>}
                 <div className="text-2xl mb-2">💬</div>
-                <h3 className={`text-sm font-bold ${status.steps.whatsapp ? 'text-green-800' : 'text-gray-900'}`}>3. Activa WhatsApp</h3>
-                <p className="text-xs text-gray-500 mt-1 mb-3 flex-1">Vincula tu número de negocio.</p>
+                <h3 className={`text-sm font-bold ${status.steps.whatsapp ? 'text-green-800' : 'text-foreground'}`}>3. Activa WhatsApp</h3>
+                <p className="text-xs text-muted-foreground mt-1 mb-3 flex-1">Vincula tu número de negocio.</p>
                 {!status.steps.whatsapp && (
-                  <span className="text-xs font-bold text-indigo-600 flex items-center gap-1 group-hover:gap-2 transition-all">
+                  <span className="text-xs font-bold text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
                     Configurar <ChevronRight className="w-3 h-3" />
                   </span>
                 )}

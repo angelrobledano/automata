@@ -18,14 +18,14 @@ export default function BackofficeDashboard() {
     });
   }, []);
 
-  if (loading) return <div className="p-10 font-sans text-gray-500">Cargando God Mode...</div>;
+  if (loading) return <div className="p-10 font-sans text-muted-foreground">Cargando God Mode...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans p-8">
+    <div className="min-h-screen bg-background font-sans p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header */}
-        <div className="flex justify-between items-center bg-gray-900 text-white p-6 rounded-2xl shadow-sm">
+        <div className="flex justify-between items-center bg-gray-900 text-white p-6 rounded-lg shadow-none">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-red-500 flex items-center gap-2">
               <span>⚡</span> Automata God Mode
@@ -41,29 +41,29 @@ export default function BackofficeDashboard() {
 
         {/* Top Metrics Row */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-500">Comercios Totales</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{metrics?.totalCommerces}</p>
+          <div className="bg-card p-6 rounded-lg shadow-none border border-border">
+            <h3 className="text-sm font-medium text-muted-foreground">Comercios Totales</h3>
+            <p className="text-3xl font-bold text-foreground mt-2">{metrics?.totalCommerces}</p>
             <p className="text-xs text-green-600 mt-1">↑ {metrics?.activeCommerces} Activos (Onboarded)</p>
           </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-500">Mensajes IA Procesados</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{metrics?.totalMessages}</p>
+          <div className="bg-card p-6 rounded-lg shadow-none border border-border">
+            <h3 className="text-sm font-medium text-muted-foreground">Mensajes IA Procesados</h3>
+            <p className="text-3xl font-bold text-foreground mt-2">{metrics?.totalMessages}</p>
           </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-500">Conversaciones (Sesiones)</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{metrics?.totalSessions}</p>
+          <div className="bg-card p-6 rounded-lg shadow-none border border-border">
+            <h3 className="text-sm font-medium text-muted-foreground">Conversaciones (Sesiones)</h3>
+            <p className="text-3xl font-bold text-foreground mt-2">{metrics?.totalSessions}</p>
           </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-500">Estado de Cola (Workers)</h3>
+          <div className="bg-card p-6 rounded-lg shadow-none border border-border">
+            <h3 className="text-sm font-medium text-muted-foreground">Estado de Cola (Workers)</h3>
             <p className="text-3xl font-bold text-green-600 mt-2">Despejado</p>
-            <p className="text-xs text-gray-500 mt-1">0 jobs pendientes</p>
+            <p className="text-xs text-muted-foreground mt-1">0 jobs pendientes</p>
           </div>
         </div>
 
         {/* Create Commerce Form */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Crear Nueva Empresa (Beta Tester)</h2>
+        <div className="bg-card p-6 rounded-lg shadow-none border border-border">
+          <h2 className="text-lg font-bold text-foreground mb-4">Crear Nueva Empresa (Beta Tester)</h2>
           <form 
             className="flex flex-wrap gap-4 items-end"
             onSubmit={async (e: any) => {
@@ -88,15 +88,15 @@ export default function BackofficeDashboard() {
             }}
           >
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Nombre</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Nombre</label>
               <input name="name" required className="px-3 py-2 border rounded-lg text-sm w-48" placeholder="Empresa S.L." />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Email (Login)</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Email (Login)</label>
               <input type="email" name="email" required className="px-3 py-2 border rounded-lg text-sm w-48" placeholder="ceo@empresa.com" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Contraseña temporal</label>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Contraseña temporal</label>
               <input type="password" name="password" required className="px-3 py-2 border rounded-lg text-sm w-40" placeholder="123456" />
             </div>
             <div className="flex items-center gap-2 mb-2">
@@ -110,9 +110,9 @@ export default function BackofficeDashboard() {
         </div>
 
         {/* CRM Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-            <h2 className="text-lg font-bold text-gray-900">Directorio de Clientes</h2>
+        <div className="bg-card rounded-lg shadow-none border border-border overflow-hidden">
+          <div className="px-6 py-5 border-b border-border flex justify-between items-center bg-background">
+            <h2 className="text-lg font-bold text-foreground">Directorio de Clientes</h2>
             <input 
               type="search" 
               placeholder="Buscar comercio..." 
@@ -120,21 +120,21 @@ export default function BackofficeDashboard() {
             />
           </div>
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-white">
+            <thead className="bg-card">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Comercio</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Onboarding</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Volumen</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Registro</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Comercio</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Onboarding</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Volumen</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Registro</th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-gray-200">
               {commerces.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={c.id} className="hover:bg-background transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-semibold text-gray-900">{c.name}</div>
-                    <div className="text-xs text-gray-500 font-mono mt-0.5">{c.id.split('-')[0]}...</div>
+                    <div className="font-semibold text-foreground">{c.name}</div>
+                    <div className="text-xs text-muted-foreground font-mono mt-0.5">{c.id.split('-')[0]}...</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {c.onboardingCompleted ? (
@@ -143,14 +143,14 @@ export default function BackofficeDashboard() {
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Incompleto</span>
                     )}
                     <div className="flex gap-1 mt-1.5">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${c.waConnected ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>WhatsApp</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${c.wooConnected ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>WooCommerce</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${c.waConnected ? 'bg-primary/20 text-indigo-700' : 'bg-card text-muted-foreground'}`}>WhatsApp</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${c.wooConnected ? 'bg-purple-100 text-purple-700' : 'bg-card text-muted-foreground'}`}>WooCommerce</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{c.sessionsCount} sesiones</div>
+                    <div className="text-sm text-foreground">{c.sessionsCount} sesiones</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {new Date(c.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

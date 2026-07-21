@@ -64,11 +64,13 @@ Si acabas de unirte al proyecto, empieza por aquí:
 - [Guía de Contribución](./docs/CONTRIBUTING.md)
 - [Registro de Cambios (Changelog)](./docs/CHANGELOG.md)
 
-## 🚀 Novedades: Billing Engine Multi-Provider
+## 🚀 Novedades Recientes (Auditoría de Producción)
 
-El sistema ha sido actualizado recientemente con una arquitectura completa de monetización SaaS B2B:
-- **Motor de Planes Dinámicos:** Configura precios y límites desde un panel UI sin tocar código.
-- **Payment Engine (Strategy Pattern):** Soporta Stripe nativamente y está arquitectónicamente blindado para soportar Redsys u otros PSP con un simple adaptador.
-- **FeatureGuard:** Middleware centralizado para validación estricta de límites (Hard limits) o cobro por uso (Overage/Metered Billing).
+El sistema ha sido actualizado recientemente con características críticas para un entorno B2B estable y seguro:
+- **Rediseño Premium de la Landing Page:** Migrada completamente a una estética ultra-minimalista inspirada en Glosae, priorizando tipografías elegantes, eliminando tarjetas y bordes rústicos, y puliendo toda la interactividad del Hero.
+- **Purga de Caché Semántica Vectorial:** Implementada la limpieza automatizada de registros obsoletos en `SemanticCache` cuando un comercio actualiza o elimina cualquier archivo de conocimiento.
+- **Filtro de Datos Sensibles (PII):** Mapeo y enmascaramiento local de tarjetas de crédito (`[TARJETA_FILTRADA]`), emails (`[EMAIL_FILTRADO]`) y credenciales sensibles (`[SECRET_FILTRADO]`) antes de ser enviados al LLM o guardados.
+- **APM & Monitorización de Latencia:** Integración de Sentry v8 nativo en el backend/worker. Medición y logs APM estructurados del tiempo de respuesta del RAG, embeddings y OpenAI.
+- **Soporte Multi-Provider (Billing Engine):** Motor de planes y adaptadores de pago agnósticos (`billingCustomerId`) desacoplados de APIs dependientes de Stripe.
 
-Lee más sobre esto en el [ADR del Payment Engine](./docs/adr/0005-payment-engine-strategy.md) y en [Decisiones de Negocio](./docs/product/business-model.md).
+Lee más sobre esto en el [ADR del Payment Engine](./docs/adr/0005-payment-engine-strategy.md) y en el [Walkthrough de Producción](./docs/deployment/local-and-prod.md).

@@ -27,7 +27,7 @@ export function GlobalAlerts() {
   return (
     <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-2xl px-4">
       {alerts.map(a => (
-        <div key={a.id} className={`p-3 rounded-lg shadow-lg flex items-center justify-between text-sm font-medium
+        <div key={a.id} className={`p-3 rounded-lg shadow-none flex items-center justify-between text-sm font-medium
           ${a.type === 'error' ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-900 border border-amber-200'}`}>
           <span>{a.msg}</span>
           <button onClick={() => setAlerts(prev => prev.filter(alert => alert.id !== a.id))} className="ml-4 opacity-70 hover:opacity-100">✕</button>

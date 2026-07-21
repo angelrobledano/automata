@@ -82,7 +82,7 @@ describe('Stripe Webhook API', () => {
     expect(res.status).toBe(200);
     expect(prisma.commerce.update).toHaveBeenCalledWith({
       where: { id: 'commerce-123' },
-      data: { plan: 'PRO', stripeCustomerId: 'cus_123' }
+      data: { subscriptionStatus: 'ACTIVE', billingCustomerId: 'cus_123' }
     });
   });
 
@@ -106,8 +106,8 @@ describe('Stripe Webhook API', () => {
     
     expect(res.status).toBe(200);
     expect(prisma.commerce.updateMany).toHaveBeenCalledWith({
-      where: { stripeCustomerId: 'cus_123' },
-      data: { plan: 'FREE' }
+      where: { billingCustomerId: 'cus_123' },
+      data: { subscriptionStatus: 'CANCELED' }
     });
   });
 });

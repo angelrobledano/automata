@@ -96,12 +96,12 @@ export function AISimulator() {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed bottom-24 right-4 md:bottom-8 md:right-8 w-[350px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[70vh] bg-background rounded-2xl shadow-2xl border border-border z-50 flex flex-col origin-bottom-right"
+            className="fixed bottom-24 right-4 md:bottom-8 md:right-8 w-[350px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[70vh] bg-background rounded-lg shadow-2xl border border-border z-50 flex flex-col origin-bottom-right"
           >
             {/* Header */}
             <div className="bg-primary p-4 rounded-t-2xl flex justify-between items-center text-primary-foreground">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm">🤖</div>
+                <div className="w-8 h-8 bg-card/20 rounded-full flex items-center justify-center text-sm">🤖</div>
                 <div>
                   <h3 className="font-bold text-sm leading-tight">Simulador IA</h3>
                   <p className="text-[10px] text-primary-foreground/80 flex items-center gap-1">
@@ -113,7 +113,7 @@ export function AISimulator() {
               <div className="flex items-center gap-1">
                 <button 
                   onClick={handleClear}
-                  className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="w-8 h-8 bg-card/10 hover:bg-card/20 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   aria-label="Reiniciar chat"
                   title="Reiniciar chat"
                 >
@@ -123,7 +123,7 @@ export function AISimulator() {
                 </button>
                 <button 
                   onClick={() => setIsOpen(false)}
-                  className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="w-8 h-8 bg-card/10 hover:bg-card/20 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   aria-label="Cerrar Simulador IA"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -149,8 +149,8 @@ export function AISimulator() {
                     )}
                     <div className={`px-4 py-2 text-sm max-w-[80%] ${
                       msg.role === 'user' 
-                        ? 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm shadow-sm' 
-                        : 'bg-background text-foreground rounded-2xl rounded-tl-sm border border-border shadow-sm'
+                        ? 'bg-primary text-primary-foreground rounded-lg rounded-tr-sm shadow-none' 
+                        : 'bg-background text-foreground rounded-lg rounded-tl-sm border border-border shadow-none'
                     }`}>
                       {msg.content}
                     </div>
@@ -167,7 +167,7 @@ export function AISimulator() {
                     className="flex justify-start items-end gap-2"
                   >
                     <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs flex-shrink-0">🤖</div>
-                    <div className="bg-background rounded-2xl rounded-tl-sm px-4 py-3 border border-border shadow-sm flex items-center gap-1.5">
+                    <div className="bg-background rounded-lg rounded-tl-sm px-4 py-3 border border-border shadow-none flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce"></span>
                       <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
                       <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
@@ -180,7 +180,7 @@ export function AISimulator() {
 
             {/* Input */}
             <div className="p-3 border-t border-border bg-background rounded-b-2xl">
-              <div className="flex items-center gap-2 bg-muted/50 border border-input rounded-xl p-1 pr-2 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:border-primary transition-all">
+              <div className="flex items-center gap-2 bg-muted/50 border border-input rounded-lg p-1 pr-2 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:border-primary transition-all">
                 <input 
                   type="text" 
                   value={inputValue}

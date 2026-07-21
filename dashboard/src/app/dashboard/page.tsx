@@ -55,10 +55,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center">
           <span className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></span>
-          <p className="text-gray-500 font-medium">Calculando el impacto de tu IA...</p>
+          <p className="text-muted-foreground font-medium">Calculando el impacto de tu IA...</p>
         </div>
       </div>
     );
@@ -66,10 +66,10 @@ export default function DashboardPage() {
 
   if (!metrics || metrics.error) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <p className="text-gray-900 font-medium mb-2">No hemos podido cargar los datos.</p>
-          <p className="text-gray-500 text-sm">Actualiza la página en unos instantes.</p>
+          <p className="text-foreground font-medium mb-2">No hemos podido cargar los datos.</p>
+          <p className="text-muted-foreground text-sm">Actualiza la página en unos instantes.</p>
         </div>
       </div>
     );
@@ -80,21 +80,21 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Resumen de Rendimiento</h1>
-          <p className="text-gray-500 mt-1">Aquí tienes el impacto de tu asistente calculado en tiempo real.</p>
+          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Resumen de Rendimiento</h1>
+          <p className="text-muted-foreground mt-1">Aquí tienes el impacto de tu asistente calculado en tiempo real.</p>
         </div>
         <div className="flex items-center gap-4">
           <select 
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm cursor-pointer"
+            className="bg-card border border-border text-muted-foreground text-sm font-semibold rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-none cursor-pointer"
           >
             <option value="today">Hoy</option>
             <option value="7d">Últimos 7 días</option>
             <option value="30d">Últimos 30 días</option>
             <option value="all">Todo el tiempo</option>
           </select>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-full border border-green-100 shadow-sm">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-full border border-green-100 shadow-none">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             <span className="text-xs font-semibold text-green-700">Asistente Activo</span>
           </div>
@@ -109,20 +109,20 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-5 h-5 text-indigo-500" />
-            <h2 className="text-lg font-bold text-gray-900">Insights Predictivos</h2>
-            <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">BETA</span>
+            <h2 className="text-lg font-bold text-foreground">Insights Predictivos</h2>
+            <span className="bg-primary/20 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">BETA</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {metrics.insights.map((insight: any) => (
-              <div key={insight.id} className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
+              <div key={insight.id} className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-lg p-5 shadow-none relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500 rounded-full blur-3xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
-                <h3 className="font-bold text-gray-900 mb-2 relative z-10">{insight.title}</h3>
-                <p className="text-sm text-gray-600 mb-5 relative z-10">{insight.description}</p>
+                <h3 className="font-bold text-foreground mb-2 relative z-10">{insight.title}</h3>
+                <p className="text-sm text-muted-foreground mb-5 relative z-10">{insight.description}</p>
                 {insight.actionLabel && (
                   <button 
                     onClick={() => handleResolveInsight(insight)}
                     disabled={resolvingInsight === insight.id}
-                    className="relative z-10 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors shadow-sm flex items-center gap-2"
+                    className="relative z-10 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-none flex items-center gap-2"
                   >
                     {resolvingInsight === insight.id ? (
                       <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -143,7 +143,7 @@ export default function DashboardPage() {
         initial={{ opacity: 0, y: 20 }} 
         animate={{ opacity: 1, y: 0 }} 
         transition={{ duration: 0.5 }}
-        className="relative overflow-hidden bg-indigo-900 rounded-3xl p-6 mb-6 shadow-xl border border-indigo-800/50"
+        className="relative overflow-hidden bg-indigo-900 rounded-lg p-6 mb-6 shadow-xl border border-indigo-800/50"
       >
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500 rounded-full blur-3xl opacity-50 animate-pulse"></div>
@@ -157,7 +157,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <motion.div 
               whileHover={{ scale: 1.02, y: -2 }}
-              className="bg-indigo-800/50 backdrop-blur-sm border border-indigo-700/50 hover:border-indigo-500/80 hover:shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-all rounded-2xl p-4 cursor-default"
+              className="bg-indigo-800/50 backdrop-blur-sm border border-indigo-700/50 hover:border-indigo-500/80 hover:shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-all rounded-lg p-4 cursor-default"
             >
               <Clock className="w-6 h-6 text-indigo-300 mb-2" />
               <h3 className="text-3xl font-extrabold text-white mb-1">{metrics.hoursSaved} horas</h3>
@@ -167,7 +167,7 @@ export default function DashboardPage() {
             </motion.div>
             <motion.div 
               whileHover={{ scale: 1.02, y: -2 }}
-              className="bg-indigo-800/50 backdrop-blur-sm border border-indigo-700/50 hover:border-amber-500/80 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] transition-all rounded-2xl p-4 cursor-default"
+              className="bg-indigo-800/50 backdrop-blur-sm border border-indigo-700/50 hover:border-amber-500/80 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] transition-all rounded-lg p-4 cursor-default"
             >
               <Zap className="w-6 h-6 text-amber-300 mb-2" />
               <h3 className="text-3xl font-extrabold text-white mb-1">{metrics.automationRate}% IA</h3>
@@ -177,7 +177,7 @@ export default function DashboardPage() {
             </motion.div>
             <motion.div 
               whileHover={{ scale: 1.02, y: -2 }}
-              className="bg-indigo-800/50 backdrop-blur-sm border border-indigo-700/50 hover:border-green-400/80 hover:shadow-[0_0_15px_rgba(74,222,128,0.5)] transition-all rounded-2xl p-4 cursor-default"
+              className="bg-indigo-800/50 backdrop-blur-sm border border-indigo-700/50 hover:border-green-400/80 hover:shadow-[0_0_15px_rgba(74,222,128,0.5)] transition-all rounded-lg p-4 cursor-default"
             >
               <Euro className="w-6 h-6 text-green-400 mb-2" />
               <h3 className="text-3xl font-extrabold text-white mb-1">{metrics.totalCost?.toFixed(4) || '0.0000'} €</h3>
@@ -198,63 +198,63 @@ export default function DashboardPage() {
         className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
       >
         
-        <motion.div whileHover={{ y: -4 }} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+        <motion.div whileHover={{ y: -4 }} className="bg-card rounded-lg p-5 border border-gray-100 shadow-none hover:shadow-none transition-all flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-start mb-1 group relative">
-              <p className="text-xs font-semibold text-gray-500 flex items-center gap-1 cursor-help">
+              <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1 cursor-help">
                 Coste de atención evitado
                 <span className="text-gray-400 border border-gray-300 rounded-full w-4 h-4 flex items-center justify-center text-[10px]">?</span>
               </p>
-              <div className="absolute top-6 left-0 bg-gray-900 text-white text-xs p-3 rounded-xl w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl">
+              <div className="absolute top-6 left-0 bg-gray-900 text-white text-xs p-3 rounded-lg w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl">
                 Se calcula asumiendo que cada respuesta del bot ahorra 2 minutos de trabajo a un agente humano, multiplicado por un salario base de 15€/hora.
               </div>
             </div>
-            <h4 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-1">{metrics.moneySaved} €</h4>
-            <p className="text-[10px] text-gray-500">Basado en un coste operativo de 15€/hora.</p>
+            <h4 className="text-4xl font-extrabold text-foreground tracking-tight mb-1">{metrics.moneySaved} €</h4>
+            <p className="text-[10px] text-muted-foreground">Basado en un coste operativo de 15€/hora.</p>
           </div>
           <div className="mt-4 pt-3 border-t border-gray-50">
-            <p className="text-xs text-gray-600 font-medium">El valor del tiempo que tu equipo ahorró en teclear.</p>
+            <p className="text-xs text-muted-foreground font-medium">El valor del tiempo que tu equipo ahorró en teclear.</p>
           </div>
         </motion.div>
 
-        <motion.div whileHover={{ y: -4 }} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between relative overflow-hidden">
+        <motion.div whileHover={{ y: -4 }} className="bg-card rounded-lg p-5 border border-gray-100 shadow-none hover:shadow-none transition-all flex flex-col justify-between relative overflow-hidden">
           <div className="absolute right-[-20px] top-[-20px] opacity-5">
-            <Zap className="w-32 h-32 text-indigo-600" />
+            <Zap className="w-32 h-32 text-primary" />
           </div>
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-1 group relative">
-              <p className="text-xs font-semibold text-gray-500 flex items-center gap-1 cursor-help">
+              <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1 cursor-help">
                 Tasa de Automatización
                 <span className="text-gray-400 border border-gray-300 rounded-full w-4 h-4 flex items-center justify-center text-[10px]">?</span>
               </p>
-              <div className="absolute top-6 left-0 bg-gray-900 text-white text-xs p-3 rounded-xl w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl">
+              <div className="absolute top-6 left-0 bg-gray-900 text-white text-xs p-3 rounded-lg w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl">
                 El porcentaje de chats totales en los que el cliente fue atendido exitosamente de principio a fin sin pedir hablar con un humano.
               </div>
             </div>
-            <h4 className="text-4xl font-extrabold text-indigo-600 tracking-tight mb-1">{metrics.automationRate}%</h4>
-            <p className="text-[10px] text-gray-500">De {metrics.totalConversations} conversaciones totales.</p>
+            <h4 className="text-4xl font-extrabold text-primary tracking-tight mb-1">{metrics.automationRate}%</h4>
+            <p className="text-[10px] text-muted-foreground">De {metrics.totalConversations} conversaciones totales.</p>
           </div>
           <div className="mt-4 pt-3 border-t border-gray-50 relative z-10">
-            <p className="text-xs text-gray-600 font-medium">Clientes que no necesitaron ayuda de un humano.</p>
+            <p className="text-xs text-muted-foreground font-medium">Clientes que no necesitaron ayuda de un humano.</p>
           </div>
         </motion.div>
 
-        <motion.div whileHover={{ y: -4 }} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+        <motion.div whileHover={{ y: -4 }} className="bg-card rounded-lg p-5 border border-gray-100 shadow-none hover:shadow-none transition-all flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-start mb-1 group relative">
-              <p className="text-xs font-semibold text-gray-500 flex items-center gap-1 cursor-help">
+              <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1 cursor-help">
                 Ventas estimadas por IA 
                 <span className="text-gray-400 border border-gray-300 rounded-full w-4 h-4 flex items-center justify-center text-[10px]">?</span>
               </p>
-              <div className="absolute top-6 left-0 bg-gray-900 text-white text-xs p-3 rounded-xl w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl">
+              <div className="absolute top-6 left-0 bg-gray-900 text-white text-xs p-3 rounded-lg w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl">
                 Se calcula asumiendo una conversión media de 12.5€ por cada consulta resuelta de manera exitosa sin intervención humana, basándose en la tasa de cierre habitual del sector.
               </div>
             </div>
-            <h4 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-1">{metrics.salesGenerated} €</h4>
-            <p className="text-[10px] text-gray-500">Basado en {metrics.aiResolvedConversations} chats resueltos.</p>
+            <h4 className="text-4xl font-extrabold text-foreground tracking-tight mb-1">{metrics.salesGenerated} €</h4>
+            <p className="text-[10px] text-muted-foreground">Basado en {metrics.aiResolvedConversations} chats resueltos.</p>
           </div>
           <div className="mt-4 pt-3 border-t border-gray-50">
-            <p className="text-xs text-gray-600 font-medium">Valor retenido por responder al instante.</p>
+            <p className="text-xs text-muted-foreground font-medium">Valor retenido por responder al instante.</p>
           </div>
         </motion.div>
 
@@ -265,20 +265,20 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
         {/* Gráfico de Área */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+        <div className="lg:col-span-2 bg-card rounded-lg p-5 border border-gray-100 shadow-none">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h4 className="text-sm font-bold text-gray-900">Volumen de Mensajes (Últimos 7 días)</h4>
-              <p className="text-[10px] text-gray-500">Mensajes recibidos vs respondidos por IA.</p>
+              <h4 className="text-sm font-bold text-foreground">Volumen de Mensajes (Últimos 7 días)</h4>
+              <p className="text-[10px] text-muted-foreground">Mensajes recibidos vs respondidos por IA.</p>
             </div>
             <div className="flex gap-3">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-200"></span>
-                <span className="text-[10px] font-medium text-gray-600">Total</span>
+                <span className="text-[10px] font-medium text-muted-foreground">Total</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
-                <span className="text-[10px] font-medium text-gray-600">Por IA</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-primary"></span>
+                <span className="text-[10px] font-medium text-muted-foreground">Por IA</span>
               </div>
             </div>
           </div>
@@ -306,16 +306,16 @@ export default function DashboardPage() {
         </div>
 
         {/* Canales y Salud */}
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between">
+        <div className="bg-card rounded-lg p-5 border border-gray-100 shadow-none flex flex-col justify-between">
           <div>
-            <h4 className="text-sm font-bold text-gray-900 mb-4">Salud del Asistente</h4>
+            <h4 className="text-sm font-bold text-foreground mb-4">Salud del Asistente</h4>
             
             <div className="mb-4">
               <div className="flex justify-between text-xs mb-1.5">
                 <span className="font-medium flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-green-500" /> Sin humano</span>
                 <span className="font-bold">{metrics.automationRate}%</span>
               </div>
-              <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+              <div className="w-full bg-card h-1.5 rounded-full overflow-hidden">
                 <div className="bg-green-500 h-full rounded-full" style={{ width: `${metrics.automationRate}%` }}></div>
               </div>
             </div>
@@ -325,15 +325,15 @@ export default function DashboardPage() {
                 <span className="font-medium flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5 text-indigo-500" /> WhatsApp</span>
                 <span className="font-bold">{metrics.totalConversations} chats</span>
               </div>
-              <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+              <div className="w-full bg-card h-1.5 rounded-full overflow-hidden">
                 <div className="bg-indigo-500 h-full rounded-full" style={{ width: '100%' }}></div>
               </div>
             </div>
           </div>
 
-          <div className="mt-4 bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
-            <p className="text-[10px] text-gray-500 mb-0.5">Tiempo de Respuesta IA</p>
-            <p className="text-lg font-extrabold text-gray-900">1.2 seg</p>
+          <div className="mt-4 bg-background rounded-lg p-3 border border-gray-100 text-center">
+            <p className="text-[10px] text-muted-foreground mb-0.5">Tiempo de Respuesta IA</p>
+            <p className="text-lg font-extrabold text-foreground">1.2 seg</p>
             <p className="text-[9px] text-green-600 font-semibold mt-0.5">35x más rápido que un humano</p>
           </div>
         </div>

@@ -32,7 +32,7 @@ export async function POST(req: Request) {
             where: { id: commerceId },
             data: { 
               subscriptionStatus: 'ACTIVE',
-              stripeCustomerId: session.customer as string
+              billingCustomerId: session.customer as string
             }
           });
         }
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         const subscription = event.data.object as Stripe.Subscription;
         if (subscription.customer) {
           await prisma.commerce.updateMany({
-            where: { stripeCustomerId: subscription.customer as string },
+            where: { billingCustomerId: subscription.customer as string },
             data: { subscriptionStatus: 'CANCELED' }
           });
         }
