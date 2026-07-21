@@ -21,4 +21,5 @@ export declare function searchSimilarChunks(commerceId: string, query: string, l
     sourcename: string;
     rrf_score: number;
 }[]>;
+export declare function purgeSemanticCache(commerceId: string): Promise<void>;
 //# sourceMappingURL=index.d.ts.map

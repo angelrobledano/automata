@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateAIResponse = generateAIResponse;
 const openai_1 = __importDefault(require("openai"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const woocommerce_1 = require("./integrations/woocommerce");
 dotenv_1.default.config();
 const openai = new openai_1.default({
     apiKey: process.env.OPENAI_API_KEY,
@@ -32,7 +31,7 @@ const tools = [
 ];
 async function generateAIResponse(commerce, customerPhone, messageHistory) {
     const messages = [
-        { role: 'system', content: commerce.systemPrompt },
+        { role: 'system', content: commerce.systemPrompt ?? '' },
         ...messageHistory,
     ];
     try {
@@ -43,31 +42,21 @@ async function generateAIResponse(commerce, customerPhone, messageHistory) {
             tool_choice: 'auto',
             temperature: 0.2,
         });
-        const responseMessage = response.choices[0].message;
-        // Verificar si la IA decidió usar la herramienta (crear el pedido)
+        const responseMessage = response.choices[0]?.message;
+        if (!responseMessage)
+            throw new Error('No response from OpenAI');
+        // Eliminar la invocación a WooCommerce por ahora, ya que refactorizamos Commerce
+        // En el futuro, recuperaremos esta configuración de un modelo de Integraciones de E-Commerce.
         if (responseMessage.tool_calls) {
             for (const toolCall of responseMessage.tool_calls) {
                 if (toolCall.type === 'function' && toolCall.function.name === 'confirm_and_create_order') {
                     const args = JSON.parse(toolCall.function.arguments);
                     console.log(`[AI] LLamada a función detectada: confirm_and_create_order`, args);
-                    try {
-                        // Pasamos los datos extraídos a WooCommerce
-                        const orderId = await (0, woocommerce_1.createWooCommerceOrder)(commerce.wooUrl, commerce.wooConsumerKey, commerce.wooConsumerSecret, {
-                            customer_name: args.customer_name,
-                            customer_phone: customerPhone,
-                            items: args.items,
-                            pickup_time: args.pickup_time,
-                            notes: args.notes || '',
-                        });
-                        return `¡Perfecto! Tu pedido ha sido confirmado y enviado a tienda. El identificador de tu pedido es el #${orderId}. ¡Gracias por confiar en nosotros!`;
-                    }
-                    catch (error) {
-                        return 'Hubo un problema al registrar tu pedido en nuestro sistema. Por favor, dínoslo en un momento e intentaremos de nuevo.';
-                    }
+                    return `¡Perfecto! He recibido tu pedido. Próximamente habilitaremos la pasarela de pedidos. ¡Gracias!`;
                 }
             }
         }
-        return responseMessage.content || '';
+        return responseMessage.content ?? '';
     }
     catch (error) {
         console.error('[OpenAI] Error generando respuesta:', error);

@@ -58,7 +58,7 @@ const inbox_1 = require("../dashboard/inbox");
     (0, vitest_1.it)('debería recuperar las sesiones de un comercio para el Inbox', async () => {
         const sessions = await (0, inbox_1.getInboxSessions)('commerce-1');
         (0, vitest_1.expect)(sessions).toHaveLength(2);
-        (0, vitest_1.expect)(sessions[0].status).toBe('HUMAN_REQUESTED');
+        (0, vitest_1.expect)(sessions?.[0]?.status).toBe('HUMAN_REQUESTED');
         // Verificamos que se llame a prisma
         const { prisma } = await Promise.resolve().then(() => __importStar(require('../db/prisma')));
         (0, vitest_1.expect)(prisma.session.findMany).toHaveBeenCalledWith({
@@ -78,7 +78,9 @@ const inbox_1 = require("../dashboard/inbox");
         vitest_1.vi.mocked((await Promise.resolve().then(() => __importStar(require('../db/prisma')))).prisma.session.update).mockResolvedValue({
             id: 'session-1',
             commerceId: 'c1',
-            customerPhone: '123',
+            customerIdentifier: '123',
+            channelConnectionId: 'conn-1',
+            isTest: false,
             status: 'HUMAN_REQUESTED',
             context: null,
             createdAt: new Date(),

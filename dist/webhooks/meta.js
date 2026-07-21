@@ -1,12 +1,9 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.receiveMessage = exports.verifyWebhook = void 0;
 const queue_1 = require("../queue");
-const ioredis_1 = __importDefault(require("ioredis"));
-const redis = new ioredis_1.default(process.env.REDIS_URL || 'redis://localhost:6379');
+const rateLimit_1 = require("../utils/rateLimit");
+const idempotency_1 = require("./middleware/idempotency");
 // Verificación del Webhook de Meta
 const verifyWebhook = (req, res) => {
     const mode = req.query['hub.mode'];
@@ -28,15 +25,9 @@ const verifyWebhook = (req, res) => {
     }
 };
 exports.verifyWebhook = verifyWebhook;
-// Rate limiter helper para webhooks (máx 15 mensajes por minuto por usuario)
-async function isRateLimited(senderId) {
-    const key = `rate_limit:${senderId}`;
-    const current = await redis.incr(key);
-    if (current === 1) {
-        await redis.expire(key, 60);
-    }
-    return current > 15;
-}
+// Rate limiter configuration
+const RATE_LIMIT_MESSAGES = 15;
+const RATE_LIMIT_WINDOW_SEC = 60;
 // Recepción de mensajes de WhatsApp
 const receiveMessage = async (req, res) => {
     try {
@@ -47,7 +38,13 @@ const receiveMessage = async (req, res) => {
                 const payload = body.entry[0].changes[0].value;
                 const msg = payload.messages[0];
                 const senderId = msg.from;
-                if (await isRateLimited(senderId)) {
+                console.log(`[Webhook] Mensaje entrante de WA recibido de: ${senderId}`);
+                // Verificación de Idempotencia
+                if (!(await (0, idempotency_1.checkIdempotency)(msg.id))) {
+                    console.log(`[Idempotency] Mensaje duplicado de WhatsApp descartado: ${msg.id}`);
+                    return;
+                }
+                if (await (0, rateLimit_1.isRateLimited)(senderId, RATE_LIMIT_MESSAGES, RATE_LIMIT_WINDOW_SEC)) {
                     console.warn(`[RateLimit] Bloqueado usuario ${senderId} por spam.`);
                     return;
                 }
@@ -56,9 +53,11 @@ const receiveMessage = async (req, res) => {
                 if (text.length > 2000)
                     text = text.substring(0, 2000) + '...';
                 // Normalizamos
+                const receiverId = payload.metadata?.phone_number_id || body.entry[0].id;
+                console.log(`[Webhook] Payload recibido:`, JSON.stringify(payload, null, 2));
                 const normalizedPayload = {
                     channel: 'WHATSAPP',
-                    receiverId: payload.metadata.phone_number_id,
+                    receiverId,
                     senderId,
                     text,
                     originalPayload: payload
@@ -74,7 +73,13 @@ const receiveMessage = async (req, res) => {
                     const isInstagram = body.object === 'instagram' || body.entry[0].id.toString().length > 15; // Heurística simple
                     const channel = isInstagram ? 'INSTAGRAM' : 'MESSENGER';
                     const senderId = messagingEvent.sender.id;
-                    if (await isRateLimited(senderId)) {
+                    const messageId = messagingEvent.message.mid;
+                    // Verificación de Idempotencia
+                    if (!(await (0, idempotency_1.checkIdempotency)(messageId))) {
+                        console.log(`[Idempotency] Mensaje duplicado de ${channel} descartado: ${messageId}`);
+                        return;
+                    }
+                    if (await (0, rateLimit_1.isRateLimited)(senderId, RATE_LIMIT_MESSAGES, RATE_LIMIT_WINDOW_SEC)) {
                         console.warn(`[RateLimit] Bloqueado usuario ${senderId} por spam en ${channel}.`);
                         return;
                     }

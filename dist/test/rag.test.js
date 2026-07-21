@@ -76,8 +76,8 @@ vitest_1.vi.mock('../db/prisma', () => ({
     (0, vitest_1.it)('debería buscar chunks similares usando similitud del coseno', async () => {
         const results = await (0, index_1.searchSimilarChunks)('commerce-1', '¿vendéis tartas?', 3);
         (0, vitest_1.expect)(results).toHaveLength(1);
-        (0, vitest_1.expect)(results[0].content).toContain('tartas de queso');
-        (0, vitest_1.expect)(results[0].distance).toBeLessThan(0.1);
+        (0, vitest_1.expect)(results?.[0]?.content).toContain('tartas de queso');
+        (0, vitest_1.expect)(results?.[0]?.distance).toBeLessThan(0.1);
         const { prisma } = await Promise.resolve().then(() => __importStar(require('../db/prisma')));
         (0, vitest_1.expect)(prisma.$queryRaw).toHaveBeenCalled();
     });

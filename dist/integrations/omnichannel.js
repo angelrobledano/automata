@@ -1,13 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendOmnichannelMessage = sendOmnichannelMessage;
+const crypto_1 = require("../utils/crypto");
 const whatsapp_1 = require("./whatsapp");
 async function sendOmnichannelMessage(commerce, channelConnection, toIdentifier, text) {
     try {
         if (!channelConnection.accessToken)
             throw new Error('Credenciales no configuradas');
-        // Asumimos que los tokens están en texto plano por ahora (o se descifran si es necesario)
-        const token = channelConnection.accessToken;
+        // Desciframos el token de acceso
+        const token = (0, crypto_1.decrypt)(channelConnection.accessToken);
         const accountId = channelConnection.channelAccountId || channelConnection.channelPhoneId;
         if (!accountId)
             throw new Error('ID de cuenta no configurado en la conexión');

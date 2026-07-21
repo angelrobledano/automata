@@ -12,6 +12,7 @@ const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 const index_1 = require("./rag/index");
 const textsplitters_1 = require("@langchain/textsplitters");
+// @ts-ignore
 const llamaindex_1 = require("llamaindex");
 dotenv_1.default.config();
 const connection = new ioredis_1.default(process.env.REDIS_URL || 'redis://localhost:6379', {
@@ -33,7 +34,7 @@ const worker = new bullmq_1.Worker('document-processing', async (job) => {
             console.log(`[DocumentWorker] Usando LlamaParse para extraer ${filename}`);
             const reader = new llamaindex_1.LlamaParseReader({ resultType: 'markdown' });
             const documents = await reader.loadData(tempFilePath);
-            fullText = documents.map(doc => doc.text).join('\n\n');
+            fullText = documents.map((doc) => doc.text).join('\n\n');
         }
         else {
             // Fallback a los parsers antiguos
@@ -50,9 +51,6 @@ const worker = new bullmq_1.Worker('document-processing', async (job) => {
             create: {
                 id: commerceId,
                 name: 'Comercio ' + commerceId,
-                wooUrl: '',
-                wooConsumerKey: '',
-                wooConsumerSecret: '',
                 systemPrompt: 'Eres un IA asistente.',
             }
         });
@@ -83,6 +81,7 @@ const worker = new bullmq_1.Worker('document-processing', async (job) => {
         WHERE id = ${docChunk.id}
       `;
         }
+        await (0, index_1.purgeSemanticCache)(commerceId);
         console.log(`[DocumentWorker] Documento ${filename} indexado con éxito.`);
     }
     catch (error) {
@@ -94,7 +93,7 @@ const worker = new bullmq_1.Worker('document-processing', async (job) => {
             fs_1.default.unlinkSync(tempFilePath);
         }
     }
-}, { connection });
+}, { connection: connection });
 worker.on('failed', (job, err) => {
     console.error(`[DocumentWorker] Job ${job?.id} falló:`, err);
 });

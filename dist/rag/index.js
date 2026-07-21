@@ -42,6 +42,7 @@ exports.addDocumentFromFile = addDocumentFromFile;
 exports.addTextThread = addTextThread;
 exports.updateTextThread = updateTextThread;
 exports.searchSimilarChunks = searchSimilarChunks;
+exports.purgeSemanticCache = purgeSemanticCache;
 const openai_1 = __importDefault(require("openai"));
 const prisma_1 = require("../db/prisma");
 const ioredis_1 = __importDefault(require("ioredis"));
@@ -83,7 +84,10 @@ async function createEmbedding(text) {
             model: 'text-embedding-3-small',
             input: text,
         });
-        embedding = response.data[0].embedding;
+        const e = response.data[0]?.embedding;
+        if (!e)
+            throw new Error('No embedding from OpenAI');
+        embedding = e;
     }
     // PgVector schema is strictly vector(1536) for OpenAI. 
     // If Ollama (nomic-embed-text) returns 768, we pad it with 0s to avoid DB crash.
@@ -127,9 +131,6 @@ async function addDocumentFromFile(commerceId, filename, buffer, category = "GEN
         create: {
             id: commerceId,
             name: 'Test Commerce',
-            wooUrl: 'https://test.com',
-            wooConsumerKey: 'test',
-            wooConsumerSecret: 'test',
             systemPrompt: 'Eres un IA asistente.',
         }
     });
@@ -184,9 +185,6 @@ async function addTextThread(commerceId, title, text, category = "GENERAL") {
         create: {
             id: commerceId,
             name: 'Test Commerce',
-            wooUrl: 'https://test.com',
-            wooConsumerKey: 'test',
-            wooConsumerSecret: 'test',
             systemPrompt: 'Eres un IA asistente.',
         }
     });
@@ -292,7 +290,7 @@ async function searchSimilarChunks(commerceId, query, limit = 3) {
       FROM "DocumentChunk" c
       JOIN "KnowledgeSource" s ON c."knowledgeSourceId" = s.id
       WHERE s."commerceId" = ${commerceId}
-        AND (c.embedding <=> ${queryEmbedding}::vector) < 0.45
+        AND (c.embedding <=> ${queryEmbedding}::vector) < 0.75
       ORDER BY distance ASC
       LIMIT 20
     ),
@@ -321,5 +319,12 @@ async function searchSimilarChunks(commerceId, query, limit = 3) {
     LIMIT ${limit}
   `;
     return results;
+}
+async function purgeSemanticCache(commerceId) {
+    console.log(`[RAG] Purgando caché semántica para comercio: ${commerceId}`);
+    await prisma_1.prisma.$executeRaw `
+    DELETE FROM "SemanticCache"
+    WHERE "commerceId" = ${commerceId}
+  `;
 }
 //# sourceMappingURL=index.js.map

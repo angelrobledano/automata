@@ -9,6 +9,7 @@ const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
 const ioredis_1 = __importDefault(require("ioredis"));
 const meta_1 = require("./webhooks/meta");
+const routes_1 = __importDefault(require("./billing/routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3001;
@@ -34,6 +35,9 @@ app.use('/api/', limiter);
 // Rutas de Webhook de Meta
 app.get('/api/webhooks/meta', meta_1.verifyWebhook);
 app.post('/api/webhooks/meta', meta_1.receiveMessage);
+// Rutas de Billing y Planes
+app.use('/api/billing', routes_1.default);
+app.use('/api/admin', routes_1.default); // En producción iría en su propio router
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
