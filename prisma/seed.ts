@@ -21,9 +21,6 @@ async function main() {
     data: {
       id: 'commerce-seed-id',
       name: 'Mi Tienda Online (Producción)',
-      wooUrl: 'https://demo.woothemes.com', // Placeholder
-      wooConsumerKey: 'ck_seed',
-      wooConsumerSecret: 'cs_seed',
       systemPrompt: 'Eres un IA amable. Atiendes clientes de Mi Tienda Online. Eres resolutivo y experto.',
       aiModel: 'gpt-4o-mini',
       aiTemperature: 0.7,
@@ -69,9 +66,6 @@ async function main() {
     data: {
       id: 'commerce-ficticia-id',
       name: 'Acme Corp Ficticia',
-      wooUrl: 'https://acmecorp.demo',
-      wooConsumerKey: 'ck_acme',
-      wooConsumerSecret: 'cs_acme',
       systemPrompt: 'Eres el asistente de Acme Corp.',
       aiModel: 'gpt-4o-mini',
       aiTemperature: 0.7,
@@ -91,12 +85,23 @@ async function main() {
     }
   });
 
+  // Create a Channel Connection for the commerce
+  const channelConn = await prisma.channelConnection.create({
+    data: {
+      commerceId: commerce.id,
+      provider: 'META',
+      channelAccountId: 'acc_seed_123',
+      channelPhoneId: '+34600000000',
+      status: 'CONNECTED'
+    }
+  });
+
   // Create some initial real-looking sessions
   const session1 = await prisma.session.create({
     data: {
       commerceId: commerce.id,
+      channelConnectionId: channelConn.id,
       customerIdentifier: '+34600000001',
-      channel: 'WHATSAPP',
       status: 'HUMAN_REQUESTED',
       isTest: false,
     }
@@ -113,8 +118,8 @@ async function main() {
   const session2 = await prisma.session.create({
     data: {
       commerceId: commerce.id,
+      channelConnectionId: channelConn.id,
       customerIdentifier: '+34600000002',
-      channel: 'WHATSAPP',
       status: 'ACTIVE',
       isTest: false,
     }
@@ -139,12 +144,22 @@ async function main() {
 
   console.log('Creando sesiones demo para Acme Corp...');
   
+  const acmeChannelConn = await prisma.channelConnection.create({
+    data: {
+      commerceId: commerceFicticia.id,
+      provider: 'META',
+      channelAccountId: 'acc_acme_123',
+      channelPhoneId: '+34600111000',
+      status: 'CONNECTED'
+    }
+  });
+
   // 1. ACTIVE: AI handling tracking
   const acmeSession1 = await prisma.session.create({
     data: {
       commerceId: commerceFicticia.id,
+      channelConnectionId: acmeChannelConn.id,
       customerIdentifier: '+34600111222',
-      channel: 'WHATSAPP',
       status: 'ACTIVE',
       isTest: false,
     }
@@ -160,8 +175,8 @@ async function main() {
   const acmeSession2 = await prisma.session.create({
     data: {
       commerceId: commerceFicticia.id,
+      channelConnectionId: acmeChannelConn.id,
       customerIdentifier: '+34700222333',
-      channel: 'INSTAGRAM',
       status: 'ACTIVE',
       isTest: false,
     }
@@ -179,8 +194,8 @@ async function main() {
   const acmeSession3 = await prisma.session.create({
     data: {
       commerceId: commerceFicticia.id,
+      channelConnectionId: acmeChannelConn.id,
       customerIdentifier: '+34600999888',
-      channel: 'WHATSAPP',
       status: 'HUMAN_REQUESTED',
       isTest: false,
     }
@@ -197,8 +212,8 @@ async function main() {
   const acmeSession4 = await prisma.session.create({
     data: {
       commerceId: commerceFicticia.id,
+      channelConnectionId: acmeChannelConn.id,
       customerIdentifier: '+34600555444',
-      channel: 'WHATSAPP',
       status: 'HUMAN_CONTROL',
       isTest: false,
     }
@@ -215,8 +230,8 @@ async function main() {
   const acmeSession5 = await prisma.session.create({
     data: {
       commerceId: commerceFicticia.id,
+      channelConnectionId: acmeChannelConn.id,
       customerIdentifier: '+34600123123',
-      channel: 'WEB',
       status: 'CLOSED',
       isTest: false,
     }
@@ -235,8 +250,8 @@ async function main() {
   const acmeSession6 = await prisma.session.create({
     data: {
       commerceId: commerceFicticia.id,
+      channelConnectionId: acmeChannelConn.id,
       customerIdentifier: '+34600456456',
-      channel: 'WHATSAPP',
       status: 'CLOSED',
       isTest: false,
     }
