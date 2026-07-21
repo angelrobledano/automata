@@ -6,7 +6,7 @@ import { createWooCommerceOrder } from './integrations/woocommerce';
 dotenv.config();
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || 'sk-fake-key-for-build-time',
 });
 
 const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [

@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || 'sk-fake-key-for-build-time',
 });
 
 const redis = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379');
