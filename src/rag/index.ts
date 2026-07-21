@@ -8,7 +8,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'sk-fake-key-for-build-time',
 });
 
-const redis = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379');
+const redis = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', { lazyConnect: true, enableOfflineQueue: false });
 
 export async function createEmbedding(text: string): Promise<number[]> {
   const provider = process.env.LLM_PROVIDER || 'openai';
