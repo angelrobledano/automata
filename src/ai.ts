@@ -26,12 +26,19 @@ export async function generateAIResponse(
     // 2. Hybrid RAG (recuperación de documentos)
     const ragChunks = await searchSimilarChunks(commerce.id, lastUserMsg, 3);
 
+    const businessContextPrompt = [
+      `Empresa: ${commerce.name || 'Mi Negocio'}`,
+      commerce.address ? `Dirección: ${commerce.address}` : null,
+      commerce.businessHours ? `Horarios habituales: ${commerce.businessHours}` : null,
+      commerce.systemPrompt ? `Estilo conversacional y tono:\n${commerce.systemPrompt}` : null
+    ].filter(Boolean).join('\n');
+
     // 3. Response Generation + Response Quality Layer + Auditoría
     const validatedResponse = await generateValidatedResponse({
       commerceId: commerce.id,
       sessionId: sessionId ?? null,
       userQuestion: lastUserMsg,
-      systemPrompt: commerce.systemPrompt ?? '',
+      systemPrompt: businessContextPrompt,
       messageHistory: messageHistory.map(m => ({ role: m.role, content: m.content || '' })),
       resolvedFacts,
       ragChunks,
