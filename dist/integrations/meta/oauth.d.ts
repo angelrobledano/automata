@@ -1,9 +1,9 @@
-export declare function getMetaAppCredentials(): {
+export declare function getMetaAppCredentials(hostOrigin?: string): {
     appId: string;
     appSecret: string;
     redirectUri: string;
 };
-export declare function getMetaLoginUrl(commerceId: string): string;
+export declare function getMetaLoginUrl(commerceId: string, hostOrigin?: string): string;
 export declare function exchangeCodeForTokens(code: string, commerceId: string, userId: string, ip: string): Promise<{
     id: string;
     commerceId: string;

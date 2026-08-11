@@ -5,18 +5,18 @@ exports.getMetaLoginUrl = getMetaLoginUrl;
 exports.exchangeCodeForTokens = exchangeCodeForTokens;
 const prisma_1 = require("../../db/prisma");
 const crypto_1 = require("../../utils/crypto");
-function getMetaAppCredentials() {
+function getMetaAppCredentials(hostOrigin) {
     const appId = process.env.META_APP_ID || process.env.META_CLIENT_ID || process.env.NEXT_PUBLIC_META_APP_ID || '2815161522203005';
     const appSecret = process.env.META_APP_SECRET || 'af9c518e052743e06fd7ee4089db9397';
-    let baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.RAILWAY_PUBLIC_DOMAIN || 'https://automata-production-669c.up.railway.app';
+    let baseUrl = hostOrigin || process.env.NEXT_PUBLIC_API_URL || 'https://automata-pied.vercel.app';
     if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
         baseUrl = `https://${baseUrl}`;
     }
     const redirectUri = `${baseUrl}/api/meta/callback`;
     return { appId, appSecret, redirectUri };
 }
-function getMetaLoginUrl(commerceId) {
-    const { appId, redirectUri } = getMetaAppCredentials();
+function getMetaLoginUrl(commerceId, hostOrigin) {
+    const { appId, redirectUri } = getMetaAppCredentials(hostOrigin);
     const scopes = [
         'whatsapp_business_messaging',
         'whatsapp_business_management',
