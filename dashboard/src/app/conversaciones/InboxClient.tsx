@@ -6,6 +6,7 @@ import {
   MessageSquare, User, Bot, CheckCircle2, Clock, AlertCircle, Phone, ArrowLeft, Send, Sparkles, X, ChevronRight, Lock, RotateCcw, AlertTriangle, ShieldAlert
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ConsolidatedStatusBar } from '@/components/ConsolidatedStatusBar';
 
 export default function InboxClient({ initialSessions }: { initialSessions: any[] }) {
   const [sessions, setSessions] = useState(initialSessions);
@@ -245,7 +246,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
     <div className="h-[calc(100vh-2rem)] bg-[#F8FAFC] font-sans text-slate-900 flex flex-col p-4 md:p-6 overflow-hidden">
       
       {/* HEADER PRINCIPAL Y DE CONTROL */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3 flex-shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Conversaciones</h1>
           <p className="text-xs text-slate-500 mt-0.5">Bandeja de atención humana para supervisar la IA</p>
@@ -258,6 +259,9 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
           </div>
         )}
       </div>
+
+      {/* NUEVA BARRA CONSOLIDADA DE ESTADO DE CONEXIONES (BG-ZINC-100 CON TAGS DE ERRORES/DISMISSIBLE) */}
+      <ConsolidatedStatusBar whatsappDisconnected={true} woocommerceIssue={true} />
 
       {/* CONTENEDOR PRINCIPAL CHAT */}
       <div className="flex-1 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-row min-h-0">
