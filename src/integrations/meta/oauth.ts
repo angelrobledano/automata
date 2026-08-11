@@ -1,12 +1,22 @@
 import { prisma } from '../../db/prisma';
 import { encrypt } from '../../utils/crypto';
 
-// Requisitos de la URL de Meta Login
-const APP_ID = process.env.META_APP_ID!;
-const APP_SECRET = process.env.META_APP_SECRET!;
-const REDIRECT_URI = process.env.NEXT_PUBLIC_API_URL + '/api/meta/callback';
+export function getMetaAppCredentials() {
+  const appId = process.env.META_APP_ID || process.env.META_CLIENT_ID || process.env.NEXT_PUBLIC_META_APP_ID || '2815161522203005';
+  const appSecret = process.env.META_APP_SECRET || 'af9c518e052743e06fd7ee4089db9397';
+  
+  let baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.RAILWAY_PUBLIC_DOMAIN || 'https://automata-production-669c.up.railway.app';
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+    baseUrl = `https://${baseUrl}`;
+  }
+  
+  const redirectUri = `${baseUrl}/api/meta/callback`;
+  return { appId, appSecret, redirectUri };
+}
 
 export function getMetaLoginUrl(commerceId: string) {
+  const { appId, redirectUri } = getMetaAppCredentials();
+
   const scopes = [
     'whatsapp_business_messaging',
     'whatsapp_business_management',
@@ -14,14 +24,15 @@ export function getMetaLoginUrl(commerceId: string) {
     'pages_messaging'
   ];
 
-  // state es crucial para asociar el callback con el tenant
   const state = JSON.stringify({ commerceId });
   const encodedState = Buffer.from(state).toString('base64');
 
-  return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${encodedState}&scope=${scopes.join(',')}&response_type=code`;
+  return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodedState}&scope=${scopes.join(',')}&response_type=code`;
 }
 
 export async function exchangeCodeForTokens(code: string, commerceId: string, userId: string, ip: string) {
+  const { appId: APP_ID, appSecret: APP_SECRET, redirectUri: REDIRECT_URI } = getMetaAppCredentials();
+
   // 1. Obtener Short-Lived User Access Token
   const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&client_secret=${APP_SECRET}&code=${code}`;
   

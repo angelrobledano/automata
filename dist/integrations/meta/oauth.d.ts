@@ -1,3 +1,8 @@
+export declare function getMetaAppCredentials(): {
+    appId: string;
+    appSecret: string;
+    redirectUri: string;
+};
 export declare function getMetaLoginUrl(commerceId: string): string;
 export declare function exchangeCodeForTokens(code: string, commerceId: string, userId: string, ip: string): Promise<{
     id: string;
