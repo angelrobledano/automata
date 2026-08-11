@@ -11,7 +11,7 @@ export declare function addTextThread(commerceId: string, title: string, text: s
     sourceId: string;
     chunksProcessed: number;
 }>;
-export declare function updateTextThread(sourceId: string, title: string, text: string): Promise<{
+export declare function updateTextThread(sourceId: string, title: string, text: string, category?: string): Promise<{
     sourceId: string;
     chunksProcessed: number;
 }>;

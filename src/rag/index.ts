@@ -13,12 +13,16 @@ const redis = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', { l
 export async function createEmbedding(text: string): Promise<number[]> {
   const provider = process.env.LLM_PROVIDER || 'openai';
   
-  // Caché de Embeddings con Redis (TTL 24h)
+  // Caché de Embeddings con Redis (TTL 24h) - Degradación suave si Redis está desconectado
   const hash = crypto.createHash('sha256').update(text).digest('hex');
   const cacheKey = `embedding:${provider}:${hash}`;
-  const cachedEmbedding = await redis.get(cacheKey);
-  if (cachedEmbedding) {
-    return JSON.parse(cachedEmbedding);
+  try {
+    const cachedEmbedding = await redis.get(cacheKey);
+    if (cachedEmbedding) {
+      return JSON.parse(cachedEmbedding);
+    }
+  } catch (err) {
+    // Si Redis está desconectado o no accesible en Serverless, ignorar el fallo de lectura de caché
   }
 
   let embedding: number[];
@@ -57,7 +61,11 @@ export async function createEmbedding(text: string): Promise<number[]> {
     embedding = embedding.slice(0, 1536);
   }
 
-  await redis.set(cacheKey, JSON.stringify(embedding), 'EX', 86400);
+  try {
+    await redis.set(cacheKey, JSON.stringify(embedding), 'EX', 86400);
+  } catch (err) {
+    // Si Redis no está disponible para escritura, ignorar y continuar
+  }
 
   return embedding;
 }

@@ -54,12 +54,17 @@ const openai = new openai_1.default({
 const redis = new ioredis_1.default(process.env.REDIS_URL || 'redis://localhost:6379', { lazyConnect: true, enableOfflineQueue: false });
 async function createEmbedding(text) {
     const provider = process.env.LLM_PROVIDER || 'openai';
-    // Caché de Embeddings con Redis (TTL 24h)
+    // Caché de Embeddings con Redis (TTL 24h) - Degradación suave si Redis está desconectado
     const hash = crypto_1.default.createHash('sha256').update(text).digest('hex');
     const cacheKey = `embedding:${provider}:${hash}`;
-    const cachedEmbedding = await redis.get(cacheKey);
-    if (cachedEmbedding) {
-        return JSON.parse(cachedEmbedding);
+    try {
+        const cachedEmbedding = await redis.get(cacheKey);
+        if (cachedEmbedding) {
+            return JSON.parse(cachedEmbedding);
+        }
+    }
+    catch (err) {
+        // Si Redis está desconectado o no accesible en Serverless, ignorar el fallo de lectura de caché
     }
     let embedding;
     if (provider === 'ollama') {
@@ -98,7 +103,12 @@ async function createEmbedding(text) {
     else if (embedding.length > 1536) {
         embedding = embedding.slice(0, 1536);
     }
-    await redis.set(cacheKey, JSON.stringify(embedding), 'EX', 86400);
+    try {
+        await redis.set(cacheKey, JSON.stringify(embedding), 'EX', 86400);
+    }
+    catch (err) {
+        // Si Redis no está disponible para escritura, ignorar y continuar
+    }
     return embedding;
 }
 async function addDocumentChunk(commerceId, sourceId, content) {
@@ -230,11 +240,15 @@ async function addTextThread(commerceId, title, text, category = "GENERAL") {
     }
     return { sourceId: source.id, chunksProcessed: results.length };
 }
-async function updateTextThread(sourceId, title, text) {
+async function updateTextThread(sourceId, title, text, category) {
     // Update source
     await prisma_1.prisma.knowledgeSource.update({
         where: { id: sourceId },
-        data: { name: title, content: text }
+        data: {
+            name: title,
+            content: text,
+            ...(category && { category })
+        }
     });
     // Delete old chunks
     await prisma_1.prisma.documentChunk.deleteMany({
