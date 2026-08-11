@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { 
-  CheckCircle2, X, ArrowRight, ShieldCheck, Clock, MessageSquare, Truck, HelpCircle, UserCheck, Sparkles, Smartphone, Check
+  CheckCircle2, X, ArrowRight, Clock, CalendarCheck, Package, UserCheck, Check
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -12,7 +12,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-blue-100">
       
-      {/* HEADER FIX NAVEGACIÓN */}
+      {/* HEADER */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
         <div className="max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
           <Link href="/" className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-1.5">
@@ -33,15 +33,17 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* 1. HERO SECTION (PROPUESTA DE VALOR EN AHORRO DE TIEMPO) */}
+      {/* ─────────────────────────────────────────────────── */}
+      {/* 1. HERO SECTION                                     */}
+      {/* ─────────────────────────────────────────────────── */}
       <section className="pt-32 pb-20 px-6 max-w-6xl mx-auto">
         <div className="grid lg:grid-cols-12 gap-12 items-center">
           
-          {/* COLUMNA IZQUIERDA: COPY & CTA */}
+          {/* COPY & CTA */}
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-bold text-blue-800">
               <Clock className="w-3.5 h-3.5 text-blue-600" />
-              <span>Soporte y Pedidos en Autopilot por WhatsApp</span>
+              <span>Tu negocio atendido 24/7 por WhatsApp</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-900 leading-[1.1]">
@@ -49,10 +51,10 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-normal max-w-xl">
-              Tu asistente IA responde las dudas de tus clientes 24/7 y da información sobre el estado de sus pedidos sin que tengas que intervenir.
+              Tu asistente IA responde las dudas sobre tu stock, horarios, citas y productos 24/7 sin que tengas que soltar lo que estás haciendo.
             </p>
 
-            {/* CAPTURA DE LEAD / CTA */}
+            {/* LEAD CAPTURE / CTA */}
             <form 
               onSubmit={(e) => {
                 e.preventDefault();
@@ -83,21 +85,19 @@ export default function LandingPage() {
             </form>
           </div>
 
-          {/* COLUMNA DERECHA: MOCKUP SMARTPHONE WHATSAPP REAL */}
+          {/* MOCKUP SMARTPHONE — Consulta de Pastelería */}
           <div className="lg:col-span-5 flex justify-center">
             <div className="w-full max-w-[340px] bg-slate-900 rounded-[40px] p-3.5 shadow-2xl border-4 border-slate-800 relative">
-              {/* NOTCH / CAMERA */}
               <div className="w-28 h-4 bg-slate-800 rounded-full mx-auto mb-3"></div>
 
-              {/* PANTALLA SMARTPHONE WHATSAPP */}
               <div className="bg-[#E5DDD5] rounded-[28px] overflow-hidden flex flex-col h-[480px] text-xs font-sans">
-                {/* WHATSAPP HEADER */}
+                {/* WA HEADER */}
                 <div className="bg-[#075E54] text-white p-3 flex items-center gap-2.5 shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">
-                    Z
+                  <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">
+                    🥐
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs leading-none">Zapatería Central</h4>
+                    <h4 className="font-bold text-xs leading-none">Pastelería La Espiga</h4>
                     <span className="text-[10px] opacity-80 flex items-center gap-1 mt-0.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                       Asistente IA · En línea
@@ -105,39 +105,40 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* MENSAJES STREAM */}
+                {/* MENSAJES */}
                 <div className="flex-1 p-3 space-y-3 overflow-y-auto">
                   {/* CLIENTE */}
                   <div className="flex justify-start">
                     <div className="bg-white text-slate-900 rounded-lg p-2.5 max-w-[85%] shadow-2xs space-y-1">
-                      <p>¿Dónde está mi pedido #1204?</p>
-                      <span className="text-[9px] text-slate-400 block text-right">14:32</span>
+                      <p>¿Tenéis palmeras de hojaldre sin azúcar para esta tarde?</p>
+                      <span className="text-[9px] text-slate-400 block text-right">11:42</span>
                     </div>
                   </div>
 
-                  {/* ASISTENTE IA (EN 2 SEGUNDOS) */}
+                  {/* ASISTENTE IA */}
                   <div className="flex justify-end">
                     <div className="bg-[#DCF8C6] text-slate-900 rounded-lg p-2.5 max-w-[90%] shadow-2xs space-y-1.5">
-                      <p className="font-medium">¡Hola Juan! Tu pedido #1204 de Zapatería Central está en camino mediante <strong>Correos Express</strong>. 🚚</p>
+                      <p className="font-medium">¡Hola! Sí, nos quedan 4 unidades de palmera de hojaldre sin azúcar recién hechas. 🥐</p>
                       <p className="text-[11px] text-slate-700 bg-white/60 p-1.5 rounded">
-                        <strong>Tracking:</strong> ES92837192<br />
-                        <strong>Estado:</strong> En reparto hoy<br />
-                        <strong>Entrega estimada:</strong> Mañana antes de las 14:00
+                        <strong>Dirección:</strong> Calle Mayor, 12<br />
+                        <strong>Horario hoy:</strong> Abierto hasta las 20:00h<br />
+                        <strong>Precio:</strong> 2,20€ / unidad
                       </p>
-                      <span className="text-[9px] text-emerald-800 block text-right font-semibold">14:32 · Respuesto en 2s</span>
+                      <p className="font-medium">¿Te reservo alguna? 😊</p>
+                      <span className="text-[9px] text-emerald-800 block text-right font-semibold">11:42 · Respuesta en 2s</span>
                     </div>
                   </div>
 
                   {/* CLIENTE GRACIAS */}
                   <div className="flex justify-start">
                     <div className="bg-white text-slate-900 rounded-lg p-2.5 max-w-[85%] shadow-2xs space-y-1">
-                      <p>¡Genial, muchas gracias por la rapidez! 🙌</p>
-                      <span className="text-[9px] text-slate-400 block text-right">14:33</span>
+                      <p>¡Genial! Guárdame 2, paso a las 18:00. Gracias! 🙌</p>
+                      <span className="text-[9px] text-slate-400 block text-right">11:43</span>
                     </div>
                   </div>
                 </div>
 
-                {/* WHATSAPP INPUT MOCK */}
+                {/* WA INPUT MOCK */}
                 <div className="bg-slate-100 p-2 border-t border-slate-200 flex items-center gap-2 text-slate-400 text-[11px]">
                   <div className="flex-1 bg-white rounded-full px-3 py-1.5 border border-slate-200">
                     Escribe un mensaje...
@@ -153,7 +154,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 2. SOCIAL PROOF / IMPACT METRICS */}
+      {/* ─────────────────────────────────────────────────── */}
+      {/* 2. SOCIAL PROOF / IMPACT METRICS                    */}
+      {/* ─────────────────────────────────────────────────── */}
       <section className="py-12 bg-white border-y border-slate-200/80">
         <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
           <div className="space-y-1">
@@ -161,22 +164,22 @@ export default function LandingPage() {
             <p className="text-xs font-bold text-slate-700">ahorradas a la semana por negocio</p>
             <p className="text-[11px] text-slate-500">Menos interrupciones en tu día a día</p>
           </div>
-
           <div className="space-y-1">
             <span className="text-3xl sm:text-4xl font-black text-emerald-600 tracking-tight block">92%</span>
             <p className="text-xs font-bold text-slate-700">de dudas frecuentes resueltas</p>
             <p className="text-[11px] text-slate-500">Sin intervención humana manual</p>
           </div>
-
           <div className="space-y-1">
             <span className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight block">2 segundos</span>
             <p className="text-xs font-bold text-slate-700">tiempo medio de respuesta</p>
-            <p className="text-[11px] text-slate-500">Respuestas inmediatas sobre estado de pedidos</p>
+            <p className="text-[11px] text-slate-500">Sobre stock, horarios, citas y pedidos</p>
           </div>
         </div>
       </section>
 
-      {/* 3. EL PROBLEMA VS LA SOLUCIÓN (BEFORE / AFTER CARDS) */}
+      {/* ─────────────────────────────────────────────────── */}
+      {/* 3. EL PROBLEMA VS LA SOLUCIÓN (BEFORE / AFTER)      */}
+      {/* ─────────────────────────────────────────────────── */}
       <section className="py-20 px-6 max-w-5xl mx-auto space-y-12">
         <div className="text-center space-y-2">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Recupera el control de tu tiempo</h2>
@@ -184,17 +187,16 @@ export default function LandingPage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 items-stretch">
-          {/* TARJETA 1: EL CAOS DIARIO */}
+          {/* CAOS DIARIO */}
           <div className="bg-rose-50/50 border border-rose-200/80 rounded-2xl p-6 space-y-4">
             <div className="flex items-center gap-2">
               <span className="p-1.5 bg-rose-100 text-rose-700 rounded-lg font-bold text-xs">❌</span>
-              <h3 className="text-sm font-bold text-rose-900">El caos diario antes de Automata</h3>
+              <h3 className="text-sm font-bold text-rose-900">El caos diario sin Automata</h3>
             </div>
-
             <ul className="space-y-3 text-xs text-rose-950 font-medium">
               <li className="flex items-start gap-2.5">
                 <X className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <span>Interrupciones constantes en tu jornada respondiendo las mismas 10 preguntas.</span>
+                <span>Interrupciones constantes respondiendo las mismas 10 preguntas sobre horarios, stock y precios.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <X className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -202,117 +204,133 @@ export default function LandingPage() {
               </li>
               <li className="flex items-start gap-2.5">
                 <X className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <span>Retrasos buscando números de seguimiento uno a uno en la web del transportista.</span>
+                <span>Perder reservas, encargos o ventas porque no pudiste contestar a tiempo.</span>
               </li>
             </ul>
           </div>
 
-          {/* TARJETA 2: TU ASISTENTE EN AUTOPILOT */}
+          {/* ASISTENTE EN AUTOPILOT */}
           <div className="bg-emerald-50/60 border border-emerald-200/90 rounded-2xl p-6 space-y-4 shadow-2xs">
             <div className="flex items-center gap-2">
               <span className="p-1.5 bg-emerald-500 text-white rounded-lg font-bold text-xs">✅</span>
               <h3 className="text-sm font-bold text-emerald-950">Tu asistente IA en Autopilot</h3>
             </div>
-
             <ul className="space-y-3 text-xs text-emerald-950 font-semibold">
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <span>Consultas de pedidos resueltas al instante con integración automática.</span>
+                <span>Consultas de stock, precios y disponibilidad resueltas al instante las 24 horas.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <span>Respuestas precisas sobre horarios, políticas de envío y catálogo del negocio.</span>
+                <span>Respuestas precisas sobre horarios, citas, políticas y catálogo de tu negocio.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <span>Notificación al móvil solo cuando un cliente requiere atención humana real.</span>
+                <span>Notificación al móvil solo cuando un cliente necesita atención humana real.</span>
               </li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* 4. CASOS DE USO PRINCIPALES (FEATURE GRID DE 3 PILARES) */}
+      {/* ─────────────────────────────────────────────────── */}
+      {/* 4. FEATURE GRID — 3 PILARES MULTISECTORIALES        */}
+      {/* ─────────────────────────────────────────────────── */}
       <section className="py-20 bg-white border-t border-slate-200/80 px-6">
         <div className="max-w-6xl mx-auto space-y-12">
           <div className="text-center space-y-2 max-w-xl mx-auto">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Diseñado para resolver lo que más tiempo te quita</h2>
-            <p className="text-xs text-slate-500">Tres pilares fundamentales para automatizar tu atención al cliente en WhatsApp.</p>
+            <p className="text-xs text-slate-500">Tres pilares fundamentales para cualquier negocio local.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {/* PILAR 1 */}
+            {/* PILAR 1: DISPONIBILIDAD Y STOCK */}
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-3 hover:border-blue-300 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                <Truck className="w-5 h-5" />
+                <Package className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900">1. Estado de Pedidos en Tiempo Real</h3>
+              <h3 className="text-sm font-bold text-slate-900">1. Disponibilidad y Stock al instante</h3>
               <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                Se conecta a tu tienda online o sistema para decir al cliente dónde está su paquete al momento sin hacerle esperar ni buscar manualmente.
+                Responde sobre dulces sin gluten o azúcar, tallas de ropa disponibles, plazas libres para una cita o servicios específicos de tu carta.
               </p>
             </div>
 
-            {/* PILAR 2 */}
+            {/* PILAR 2: HORARIOS, CITAS Y LOCALIZACIÓN */}
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-3 hover:border-blue-300 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                <HelpCircle className="w-5 h-5" />
+                <CalendarCheck className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900">2. Resolución de Dudas Frecuentes</h3>
+              <h3 className="text-sm font-bold text-slate-900">2. Horarios, Citas y Localización</h3>
               <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                Aprende tus políticas de envío, cambios de talla, horarios y detalles del negocio en minutos leyendo tus documentos.
+                Informa al cliente de cómo llegar, horarios festivos, y envía enlaces directos para reservar cita en peluquerías, estética o clínicas.
               </p>
             </div>
 
-            {/* PILAR 3 */}
+            {/* PILAR 3: CONTROL HUMANO */}
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-3 hover:border-blue-300 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
                 <UserCheck className="w-5 h-5" />
               </div>
               <h3 className="text-sm font-bold text-slate-900">3. Control Humano cuando Importa</h3>
               <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                La IA se pausa y deriva la conversación a tu equipo solo en casos complejos o de alta prioridad con aviso discreto.
+                La IA pasa el control a tu móvil solo en encargos especiales, consultas complejas o situaciones de alta prioridad. Tú decides cuándo intervenir.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 5. CHAT TESTIMONIALS / CASOS REALES */}
-      <section className="py-20 px-6 max-w-5xl mx-auto space-y-12">
+      {/* ─────────────────────────────────────────────────── */}
+      {/* 5. CHAT TESTIMONIALS — 3 SECTORES REALES            */}
+      {/* ─────────────────────────────────────────────────── */}
+      <section className="py-20 px-6 max-w-6xl mx-auto space-y-12">
         <div className="text-center space-y-2 max-w-md mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Ejemplos de conversaciones reales</h2>
-          <p className="text-xs text-slate-500">Respuestas precisas que generan confianza e inmediatez.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Conversaciones reales de cada sector</h2>
+          <p className="text-xs text-slate-500">Tu asistente se adapta al lenguaje de tu tipo de negocio.</p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* EJEMPLO A: DUDAS Y POLÍTICAS */}
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* TARJETA 1: PASTELERÍA / ALIMENTACIÓN */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-              Soporte y Políticas
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+              🥐 Pastelería / Alimentación
             </span>
-            
             <div className="bg-slate-50 p-3 rounded-xl space-y-2 text-xs">
               <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-slate-900 max-w-[90%]">
-                <p>— ¿Tenéis cambio de talla gratuito?</p>
+                <p>— ¿Los croissants de almendra llevan lactosa?</p>
               </div>
               <div className="bg-emerald-100/70 p-2.5 rounded-lg text-emerald-950 max-w-[95%] ml-auto font-medium">
-                <p>— ¡Hola! Sí, los cambios de talla son 100% gratuitos durante 30 días. Te enviamos al mensajero a entregar la nueva talla y recoger la anterior sin coste.</p>
+                <p>— Nuestros croissants de almendra contienen trazas de lactosa. Si buscas opciones 100% sin lactosa, hoy tenemos tarta de manzana y galletas de avena recién hechas. 🍪</p>
               </div>
             </div>
           </div>
 
-          {/* EJEMPLO B: SEGUIMIENTO DE PEDIDOS */}
+          {/* TARJETA 2: PELUQUERÍA / ESTÉTICA */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-              Estado de Envíos
+            <span className="text-[10px] font-bold uppercase tracking-wider text-fuchsia-700 bg-fuchsia-50 px-2 py-0.5 rounded-md">
+              💇 Peluquería / Estética
             </span>
-            
             <div className="bg-slate-50 p-3 rounded-xl space-y-2 text-xs">
               <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-slate-900 max-w-[90%]">
-                <p>— ¿Cuándo llega mi paquete?</p>
+                <p>— ¿Tenéis hueco para cortar y peinar esta tarde?</p>
               </div>
               <div className="bg-emerald-100/70 p-2.5 rounded-lg text-emerald-950 max-w-[95%] ml-auto font-medium">
-                <p>— Tu paquete del pedido #4891 llegará mañana entre las 10:00 y las 14:00 por Correos Express. Puedes ver el seguimiento en vivo aquí: [Tracking]</p>
+                <p>— Hoy tenemos un hueco a las 17:30h con Marta. Puedes confirmar tu reserva directamente aquí: <span className="text-blue-700 underline">reservar cita →</span></p>
+              </div>
+            </div>
+          </div>
+
+          {/* TARJETA 3: TIENDA DE ROPA / BOUTIQUE */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+              👗 Tienda de Ropa / Boutique
+            </span>
+            <div className="bg-slate-50 p-3 rounded-xl space-y-2 text-xs">
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-slate-900 max-w-[90%]">
+                <p>— ¿Tenéis el vestido verde de lino en talla M?</p>
+              </div>
+              <div className="bg-emerald-100/70 p-2.5 rounded-lg text-emerald-950 max-w-[95%] ml-auto font-medium">
+                <p>— ¡Hola! Nos queda solo 1 unidad en talla M en tienda. Te la guardamos si te pasas antes de las 19:00h. 🧵</p>
               </div>
             </div>
           </div>
@@ -321,15 +339,17 @@ export default function LandingPage() {
         {/* TESTIMONIO DESTACADO */}
         <div className="bg-slate-900 text-white rounded-2xl p-8 text-center space-y-3 shadow-md">
           <p className="text-base sm:text-lg font-medium italic text-slate-100 max-w-2xl mx-auto">
-            "Por fin puedo desconectar el fin de semana sin dejar a mis clientes desatendidos ni perder ventas."
+            "Estar con las manos en la masa en el obrador o atendiendo a un cliente en la tienda y saber que WhatsApp responde por mí a los que preguntan por stock o horarios no tiene precio."
           </p>
           <p className="text-xs text-blue-400 font-bold">
-            Carlos M. · Fundador de Calzados & Moda (Madrid)
+            Laura G. · Fundadora de La Espiga Dorada (Valencia)
           </p>
         </div>
       </section>
 
-      {/* 6. PRICING & FAQ */}
+      {/* ─────────────────────────────────────────────────── */}
+      {/* 6. PRICING & FAQ                                    */}
+      {/* ─────────────────────────────────────────────────── */}
       <section className="py-20 bg-white border-t border-slate-200/80 px-6">
         <div className="max-w-4xl mx-auto space-y-16">
           
@@ -353,10 +373,10 @@ export default function LandingPage() {
                 <Check className="w-4 h-4 text-emerald-600" /> Conversaciones de WhatsApp ilimitadas 24/7
               </li>
               <li className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-600" /> Consulta automática de estado de pedidos
+                <Check className="w-4 h-4 text-emerald-600" /> Memoriza tu catálogo, carta o servicios en 2 min
               </li>
               <li className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-600" /> Lectura de catálogo y documentos en 2 min
+                <Check className="w-4 h-4 text-emerald-600" /> Responde sobre stock, horarios, citas y precios
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600" /> Derivación y control humano instantáneo
@@ -372,7 +392,7 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* PREGUNTAS FRECUENTES (FAQ ORIENTADAS A LA TRANQUILIDAD) */}
+          {/* PREGUNTAS FRECUENTES */}
           <div className="space-y-6 max-w-2xl mx-auto">
             <h3 className="text-xl font-bold text-slate-900 text-center">Preguntas Frecuentes</h3>
 
@@ -385,9 +405,9 @@ export default function LandingPage() {
               </div>
 
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                <h4 className="font-bold text-slate-900 text-sm">¿Cómo se conecta con los datos de mis pedidos?</h4>
+                <h4 className="font-bold text-slate-900 text-sm">¿Cómo aprende la información de mi negocio?</h4>
                 <p className="text-slate-600 leading-relaxed font-normal">
-                  Se conecta automáticamente con tu tienda WooCommerce, Shopify o sistema en menos de 3 minutos mediante claves seguras de API.
+                  Arrastra un PDF con tu carta, catálogo o lista de servicios y la IA lo memoriza en segundos. También puedes escribir la información directamente desde el panel.
                 </p>
               </div>
 
@@ -395,6 +415,13 @@ export default function LandingPage() {
                 <h4 className="font-bold text-slate-900 text-sm">¿Puedo tomar el control del chat en cualquier momento?</h4>
                 <p className="text-slate-600 leading-relaxed font-normal">
                   Sí, en cuanto respondes a un cliente desde tu panel o móvil, la IA se congela automáticamente para dejarte la atención completa a ti.
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <h4 className="font-bold text-slate-900 text-sm">¿Sirve para mi tipo de negocio?</h4>
+                <p className="text-slate-600 leading-relaxed font-normal">
+                  Automata está diseñado para cualquier negocio local que reciba consultas por WhatsApp: pastelerías, peluquerías, tiendas de ropa, clínicas, restaurantes, talleres, floristerías y más.
                 </p>
               </div>
             </div>
@@ -407,7 +434,7 @@ export default function LandingPage() {
       <footer className="py-12 px-6 border-t border-slate-200/80 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto space-y-2">
           <p className="font-bold text-slate-900">Automata.</p>
-          <p>&copy; {new Date().getFullYear()} Automata. Asistente IA de Soporte y Pedidos para comercio electrónico.</p>
+          <p>&copy; {new Date().getFullYear()} Automata. Asistente IA de atención al cliente para negocios locales.</p>
         </div>
       </footer>
 
