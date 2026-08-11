@@ -22,8 +22,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       });
 
       if (session && session.channelConnection?.provider === 'META' && session.channelConnection.channelPhoneId) {
-        // Need to decrypt the token in a real scenario, assuming decrypt is available or skipping for now
-        // For simplicity, we just check if it has accessToken
         const waToken = process.env.WHATSAPP_TOKEN || session.channelConnection.accessToken || '';
         if (waToken) {
           const { WhatsAppService } = await import('../../../../../services/whatsapp.service');
@@ -39,6 +37,16 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       } else {
         console.log(`[WhatsApp API Mock] Enviando mensaje a sesión ${id}: "${message}"`);
       }
+
+      // Si el humano envía un mensaje, la sesión pasa automáticamente a HUMAN_ACTIVE
+      await prisma.session.update({
+        where: { id },
+        data: {
+          status: 'HUMAN_ACTIVE',
+          controlBy: 'HUMAN',
+          waitingSince: null
+        }
+      });
     }
 
     // Persistir el mensaje en la base de datos

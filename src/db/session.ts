@@ -1,6 +1,5 @@
 import { prisma } from './prisma';
 
-// Recupera o crea una sesión activa para un identificador de cliente en un comercio
 export async function getOrCreateSession(commerceId: string, customerIdentifier: string, channelConnectionId: string) {
   let session = await prisma.session.findUnique({
     where: {
@@ -18,21 +17,26 @@ export async function getOrCreateSession(commerceId: string, customerIdentifier:
         commerceId,
         customerIdentifier,
         channelConnectionId,
-        status: 'ACTIVE',
+        status: 'AI_ACTIVE',
+        controlBy: 'AI'
       },
     });
-  } else if (session.status === 'CLOSED') {
-    // Reactivamos si estaba cerrado
+  } else if (session.status === 'RESOLVED') {
+    // Si estaba resuelta y entra un nuevo mensaje, reactivar gestionada por IA
     session = await prisma.session.update({
       where: { id: session.id },
-      data: { status: 'ACTIVE' },
+      data: { 
+        status: 'AI_ACTIVE',
+        controlBy: 'AI',
+        humanReason: null,
+        waitingSince: null
+      },
     });
   }
 
   return session;
 }
 
-// Obtiene el historial de mensajes de la sesión
 export async function getSessionMessages(sessionId: string) {
   return prisma.message.findMany({
     where: { sessionId },
@@ -40,7 +44,6 @@ export async function getSessionMessages(sessionId: string) {
   });
 }
 
-// Añade un mensaje al historial
 export async function addMessageToSession(sessionId: string, role: 'user' | 'assistant' | 'system', content: string) {
   return prisma.message.create({
     data: {

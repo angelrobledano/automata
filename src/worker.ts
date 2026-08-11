@@ -85,9 +85,34 @@ const worker = new Worker(
           connection.publish('chat_updates', JSON.stringify({ sessionId: session.id, message: { role: 'user', content: cleanText, createdAt: new Date().toISOString() } }));
         }
 
-        // ABORTAR FLUJO DE IA SI ESTÁ EN CONTROL HUMANO
-        if (session.status === 'HUMAN_CONTROL') {
-          console.log(`[Worker] Sesión ${session.id} en control humano. IA omitida.`);
+        // 2b. DETECCIÓN DE SOLICITUD EXPLÍCITA DE ATENCIÓN HUMANA
+        const lowerText = cleanText.toLowerCase();
+        if (lowerText.includes('hablar con una persona') || lowerText.includes('agente humano') || lowerText.includes('operador') || lowerText.includes('hablar con alguien')) {
+          console.log(`[Worker] Detección de solicitud explícita de atención humana en sesión ${session.id}`);
+          await prisma.session.update({
+            where: { id: session.id },
+            data: {
+              status: 'HUMAN_REQUIRED',
+              controlBy: 'HUMAN',
+              humanReason: 'Cliente solicita hablar con una persona.',
+              waitingSince: session.waitingSince || new Date(),
+              aiSummary: {
+                intent: 'HUMAN_REQUEST',
+                reason: 'El cliente solicitó explícitamente ser atendido por una persona.',
+                relevantData: `Último mensaje recibido: "${cleanText}"`
+              },
+              suggestedReply: 'Hola, un agente humano tomará tu consulta de inmediato. ¿En qué te podemos ayudar?'
+            }
+          });
+          return;
+        }
+
+        // ABORTAR FLUJO DE IA SI ESTÁ EN CONTROL HUMANO O REQUIERE ATENCIÓN HUMANA (CERO AMBIGÜEDAD)
+        if (session.status === 'HUMAN_ACTIVE' || session.status === 'HUMAN_REQUIRED' || session.controlBy === 'HUMAN') {
+          console.log(`[Worker] Sesión ${session.id} bajo control/espera humana (status: ${session.status}). IA pausada.`);
+          if (session.status === 'HUMAN_REQUIRED' && !session.waitingSince) {
+            await prisma.session.update({ where: { id: session.id }, data: { waitingSince: new Date() } });
+          }
           return;
         }
 

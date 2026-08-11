@@ -17,6 +17,12 @@ export declare function getInboxSessions(commerceId: string): Promise<({
     createdAt: Date;
     channelConnectionId: string;
     customerIdentifier: string;
+    controlBy: string;
+    humanReason: string | null;
+    aiSummary: import("@prisma/client/runtime/library").JsonValue | null;
+    suggestedReply: string | null;
+    waitingSince: Date | null;
+    assignedUserId: string | null;
     isTest: boolean;
     context: string | null;
     updatedAt: Date;
@@ -28,6 +34,12 @@ export declare function requestHuman(sessionId: string): Promise<{
     createdAt: Date;
     channelConnectionId: string;
     customerIdentifier: string;
+    controlBy: string;
+    humanReason: string | null;
+    aiSummary: import("@prisma/client/runtime/library").JsonValue | null;
+    suggestedReply: string | null;
+    waitingSince: Date | null;
+    assignedUserId: string | null;
     isTest: boolean;
     context: string | null;
     updatedAt: Date;

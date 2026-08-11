@@ -230,7 +230,13 @@ model Session {
   commerceId          String
   channelConnectionId String
   customerIdentifier  String
-  status              String    @default("ACTIVE") 
+  status              String    @default("AI_ACTIVE") // "AI_ACTIVE", "HUMAN_REQUIRED", "HUMAN_ACTIVE", "RESOLVED"
+  controlBy           String    @default("AI")        // "AI" | "HUMAN"
+  humanReason         String?   @db.Text              // Motivo de derivacion humana
+  aiSummary           Json?                           // Resumen de la IA { intent, reason, relevantData }
+  suggestedReply      String?   @db.Text              // Respuesta sugerida para el humano
+  waitingSince        DateTime?                       // Timestamp desde que el cliente espera atencion humana
+  assignedUserId      String?                         // ID del empleado asignado
   isTest              Boolean   @default(false)
   context             String?   
   createdAt           DateTime  @default(now())
@@ -242,6 +248,7 @@ model Session {
   @@unique([commerceId, customerIdentifier, channelConnectionId]) 
   @@index([commerceId])
   @@index([channelConnectionId])
+  @@index([status])
 }
 
 model Message {

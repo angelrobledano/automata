@@ -3,56 +3,106 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { 
-  MessageSquare, User, Bot, CheckCircle2, Clock, AlertCircle, Phone, ArrowLeft, Send, Sparkles, X, ChevronRight, Lock
+  MessageSquare, User, Bot, CheckCircle2, Clock, AlertCircle, Phone, ArrowLeft, Send, Sparkles, X, ChevronRight, Lock, RotateCcw, AlertTriangle, ShieldAlert
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function InboxClient({ initialSessions }: { initialSessions: any[] }) {
   const [sessions, setSessions] = useState(initialSessions);
   const [activeSessionId, setActiveSessionId] = useState(initialSessions[0]?.id || null);
   const [replyText, setReplyText] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'ai' | 'history'>('all');
+  
+  // Filtros orientados a acción: 'all' | 'need_attention' | 'ai_active' | 'resolved'
+  const [activeFilter, setActiveFilter] = useState<'all' | 'need_attention' | 'ai_active' | 'resolved'>('need_attention');
   const [searchQuery, setSearchQuery] = useState('');
   const [showListOnMobile, setShowListOnMobile] = useState(true);
-  const [showAutopilotModal, setShowAutopilotModal] = useState(false);
+  
+  // Modal / Confirmación ligera para Devolución a IA
+  const [showReturnConfirm, setShowReturnConfirm] = useState(false);
   const [autopilotInstruction, setAutopilotInstruction] = useState('');
   const [isInternalNote, setIsInternalNote] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const filteredSessions = sessions.filter(s => {
-    const matchesSearch = !searchQuery || 
-      (s.customerPhone && s.customerPhone.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (s.messages && s.messages.some((m: any) => m.content.toLowerCase().includes(searchQuery.toLowerCase())));
+  // Calcular contadores reales de negocio
+  const needAttentionCount = sessions.filter(s => 
+    s.status === 'HUMAN_REQUIRED' || 
+    (s.status === 'HUMAN_ACTIVE' && s.messages?.[s.messages.length - 1]?.role === 'user')
+  ).length;
 
-    if (!matchesSearch) return false;
+  const aiActiveCount = sessions.filter(s => s.status === 'AI_ACTIVE' || (s.status === 'ACTIVE' && s.controlBy !== 'HUMAN')).length;
+  const resolvedCount = sessions.filter(s => s.status === 'RESOLVED' || s.status === 'CLOSED').length;
 
-    if (activeFilter === 'pending') return s.status === 'HUMAN_REQUESTED' || s.status === 'HUMAN_CONTROL';
-    if (activeFilter === 'ai') return s.status === 'ACTIVE';
-    if (activeFilter === 'history') return s.status === 'CLOSED';
-    return true;
-  });
+  // Filtrar y Priorizar sesiones
+  const filteredSessions = sessions
+    .filter(s => {
+      const matchesSearch = !searchQuery || 
+        (s.customerIdentifier && s.customerIdentifier.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (s.messages && s.messages.some((m: any) => m.content.toLowerCase().includes(searchQuery.toLowerCase())));
 
-  const pendingCount = sessions.filter(s => s.status === 'HUMAN_REQUESTED' || (s.status === 'HUMAN_CONTROL' && s.messages?.[s.messages.length - 1]?.role === 'user')).length;
+      if (!matchesSearch) return false;
+
+      if (activeFilter === 'need_attention') {
+        return s.status === 'HUMAN_REQUIRED' || s.status === 'HUMAN_ACTIVE' || s.status === 'HUMAN_REQUESTED' || s.status === 'HUMAN_CONTROL';
+      }
+      if (activeFilter === 'ai_active') {
+        return (s.status === 'AI_ACTIVE' || s.status === 'ACTIVE') && s.controlBy !== 'HUMAN';
+      }
+      if (activeFilter === 'resolved') {
+        return s.status === 'RESOLVED' || s.status === 'CLOSED';
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      // Prioridad 1: HUMAN_REQUIRED / Esperando atención
+      const isAHelp = a.status === 'HUMAN_REQUIRED' || a.status === 'HUMAN_REQUESTED';
+      const isBHelp = b.status === 'HUMAN_REQUIRED' || b.status === 'HUMAN_REQUESTED';
+      
+      if (isAHelp && !isBHelp) return -1;
+      if (!isAHelp && isBHelp) return 1;
+
+      // Dentro de necesitados, ordenar por tiempo de espera (longest waiting first)
+      if (isAHelp && isBHelp) {
+        const timeA = new Date(a.waitingSince || a.updatedAt).getTime();
+        const timeB = new Date(b.waitingSince || b.updatedAt).getTime();
+        return timeA - timeB;
+      }
+
+      // Prioridad 2: HUMAN_ACTIVE
+      const isAHuman = a.status === 'HUMAN_ACTIVE' || a.status === 'HUMAN_CONTROL';
+      const isBHuman = b.status === 'HUMAN_ACTIVE' || b.status === 'HUMAN_CONTROL';
+      if (isAHuman && !isBHuman) return -1;
+      if (!isAHuman && isBHuman) return 1;
+
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [sessions, activeSessionId]);
 
-  const handleSendMessage = async () => {
-    if (!replyText.trim() || !activeSessionId || isSending) return;
+  const handleSendMessage = async (overrideContent?: string) => {
+    const textToSend = overrideContent || replyText;
+    if (!textToSend.trim() || !activeSessionId || isSending) return;
     setIsSending(true);
 
-    const messageContent = replyText;
-    setReplyText('');
+    if (!overrideContent) setReplyText('');
 
+    // Actualización optimista de estado local: el humano responde -> pasa a HUMAN_ACTIVE
     setSessions(prev => {
       const updated = [...prev];
       const sessionIndex = updated.findIndex(s => s.id === activeSessionId);
       if (sessionIndex > -1) {
         if (!updated[sessionIndex].messages) updated[sessionIndex].messages = [];
-        updated[sessionIndex].messages.push({ role: isInternalNote ? 'internal_note' : 'assistant', content: messageContent, createdAt: new Date() });
+        updated[sessionIndex].messages.push({ 
+          role: isInternalNote ? 'internal_note' : 'assistant', 
+          content: textToSend, 
+          createdAt: new Date() 
+        });
+        updated[sessionIndex].status = 'HUMAN_ACTIVE';
+        updated[sessionIndex].controlBy = 'HUMAN';
+        updated[sessionIndex].waitingSince = null;
         updated[sessionIndex].updatedAt = new Date();
       }
       return updated;
@@ -63,7 +113,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
         await fetch(`/api/sessions/${activeSessionId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: messageContent, isInternalNote })
+          body: JSON.stringify({ message: textToSend, isInternalNote })
         });
       } catch (error) {
         console.error('Error sending message:', error);
@@ -95,9 +145,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
           fetch(`/api/sessions`)
             .then(res => res.json())
             .then(data => {
-              if (data.sessions) {
-                setSessions(data.sessions);
-              }
+              if (data.sessions) setSessions(data.sessions);
             });
           return prev;
         }
@@ -109,53 +157,44 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
     };
   }, []);
 
-  const handleHandoff = async (action: 'take_control' | 'return_ai' | 'close_session') => {
-    if (!activeSessionId) return;
-    
-    if (activeSessionId.startsWith('mock-')) {
-      let newStatus = 'ACTIVE';
-      if (action === 'take_control') newStatus = 'HUMAN_CONTROL';
-      if (action === 'close_session') newStatus = 'CLOSED';
-      
-      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, status: newStatus } : s));
-      if (action === 'return_ai') {
-        setShowAutopilotModal(true);
-        return;
-      }
-      if (action === 'close_session') {
-        setActiveSessionId(null);
-        setShowListOnMobile(true);
-      }
-      return;
-    }
-
-    await executeHandoff(action);
-  };
-
-  const executeHandoff = async (action: 'take_control' | 'return_ai' | 'close_session', instruction?: string) => {
+  // Ejecución de cambios de Handoff
+  const executeHandoff = async (
+    action: 'take_control' | 'return_ai' | 'resolve' | 'resolve_and_return_ai', 
+    instruction?: string
+  ) => {
     if (!activeSessionId) return;
 
     try {
       const body: any = { action };
       if (instruction) body.instruction = instruction;
 
-      const res = await fetch(`/api/sessions/${activeSessionId}/handoff`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, status: data.session.status } : s));
-        if (action === 'close_session') {
-          setActiveSessionId(null);
-          setShowListOnMobile(true);
+      // Actualización optimista local
+      setSessions(prev => prev.map(s => {
+        if (s.id === activeSessionId) {
+          if (action === 'take_control') {
+            return { ...s, status: 'HUMAN_ACTIVE', controlBy: 'HUMAN', waitingSince: null };
+          }
+          if (action === 'return_ai') {
+            return { ...s, status: 'AI_ACTIVE', controlBy: 'AI', humanReason: null, aiSummary: null, waitingSince: null };
+          }
+          if (action === 'resolve') {
+            return { ...s, status: 'RESOLVED', waitingSince: null };
+          }
+          if (action === 'resolve_and_return_ai') {
+            return { ...s, status: 'RESOLVED', controlBy: 'AI', humanReason: null, waitingSince: null };
+          }
         }
-        if (action === 'return_ai') {
-          setShowAutopilotModal(false);
-          setAutopilotInstruction('');
-        }
+        return s;
+      }));
+
+      if (action === 'return_ai') setShowReturnConfirm(false);
+
+      if (!activeSessionId.startsWith('mock-')) {
+        await fetch(`/api/sessions/${activeSessionId}/handoff`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
       }
     } catch (error) {
       console.error('Error changing handoff status:', error);
@@ -163,6 +202,17 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
   };
 
   const activeSession = sessions.find(s => s.id === activeSessionId);
+
+  // Formateo de tiempo de espera relativo (ej. "12 min")
+  const getWaitingTimeFormatted = (dateStr?: string | Date) => {
+    if (!dateStr) return 'Recién';
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Recién';
+    if (diffMins < 60) return `${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    return `${diffHours} h ${diffMins % 60} min`;
+  };
 
   const renderMessageContent = (msg: any) => {
     const content = msg.content || '';
@@ -194,17 +244,17 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
   return (
     <div className="h-[calc(100vh-2rem)] bg-[#F8FAFC] font-sans text-slate-900 flex flex-col p-4 md:p-6 overflow-hidden">
       
-      {/* HEADER PRINCIPAL */}
+      {/* HEADER PRINCIPAL Y DE CONTROL */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 flex-shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Conversaciones</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Revisa y atiende las conversaciones mantenidas por tu asistente</p>
+          <p className="text-xs text-slate-500 mt-0.5">Bandeja de atención humana para supervisar la IA</p>
         </div>
         
-        {pendingCount > 0 && (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-800">
+        {needAttentionCount > 0 && (
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-900 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            <span>{pendingCount} conversación{pendingCount > 1 ? 'es' : ''} requiere{pendingCount > 1 ? 'n' : ''} respuesta</span>
+            <span>{needAttentionCount} conversación{needAttentionCount > 1 ? 'es' : ''} requieren tu atención</span>
           </div>
         )}
       </div>
@@ -214,240 +264,425 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
         
         {/* PANEL IZQUIERDO: LISTA DE CONVERSACIONES */}
         <div className={`flex-shrink-0 border-r border-slate-200 flex-col bg-slate-50/50 
-          ${showListOnMobile ? 'flex w-full md:w-[320px]' : 'hidden md:flex w-[320px]'}`}>
+          ${showListOnMobile ? 'flex w-full md:w-[360px]' : 'hidden md:flex w-[360px]'}`}>
           
-          {/* BARRA DE BÚSQUEDA Y FILTROS */}
+          {/* BARRA DE BÚSQUEDA Y FILTROS ORIENTADOS A ACCIÓN */}
           <div className="p-3.5 border-b border-slate-200 bg-white space-y-2.5">
             <input 
               type="search" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar cliente o mensaje..." 
+              placeholder="Buscar por cliente o mensaje..." 
               className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
             />
 
-            <div className="flex bg-slate-100 p-1 rounded-lg gap-1">
+            <div className="grid grid-cols-4 bg-slate-100 p-1 rounded-lg gap-1">
               <button 
                 onClick={() => setActiveFilter('all')}
-                className={`flex-1 text-[11px] font-semibold py-1 rounded-md transition-all ${
-                  activeFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                className={`text-[11px] font-bold py-1 rounded-md transition-all ${
+                  activeFilter === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 Todas
               </button>
+              
               <button 
-                onClick={() => setActiveFilter('pending')}
-                className={`flex-1 text-[11px] font-semibold py-1 rounded-md transition-all flex items-center justify-center gap-1 ${
-                  activeFilter === 'pending' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                onClick={() => setActiveFilter('need_attention')}
+                className={`text-[11px] font-bold py-1 rounded-md transition-all flex items-center justify-center gap-1 ${
+                  activeFilter === 'need_attention' 
+                    ? 'bg-amber-500 text-white shadow-xs' 
+                    : 'text-amber-700 hover:bg-amber-50'
                 }`}
               >
-                Pendientes
-                {pendingCount > 0 && (
-                  <span className="bg-amber-100 text-amber-800 text-[9px] px-1.5 py-0.2 rounded-full font-bold">
-                    {pendingCount}
+                Atención
+                {needAttentionCount > 0 && (
+                  <span className="bg-amber-700 text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold">
+                    {needAttentionCount}
                   </span>
                 )}
               </button>
+
               <button 
-                onClick={() => setActiveFilter('ai')}
-                className={`flex-1 text-[11px] font-semibold py-1 rounded-md transition-all ${
-                  activeFilter === 'ai' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                onClick={() => setActiveFilter('ai_active')}
+                className={`text-[11px] font-bold py-1 rounded-md transition-all ${
+                  activeFilter === 'ai_active' ? 'bg-white text-blue-700 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                Autopiloto
+                IA
               </button>
+
               <button 
-                onClick={() => setActiveFilter('history')}
-                className={`flex-1 text-[11px] font-semibold py-1 rounded-md transition-all ${
-                  activeFilter === 'history' ? 'bg-white text-slate-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                onClick={() => setActiveFilter('resolved')}
+                className={`text-[11px] font-bold py-1 rounded-md transition-all ${
+                  activeFilter === 'resolved' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                Histórico
+                Resueltas
               </button>
             </div>
           </div>
-          
-          {/* LISTA PREDETERMINADA DE CONVERSACIONES */}
+
+          {/* LISTA SCROLLABLE DE CONVERSACIONES */}
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
             {filteredSessions.length === 0 ? (
-              <div className="p-8 text-center mt-6 space-y-2">
-                <MessageSquare className="w-8 h-8 text-slate-300 mx-auto" />
-                <p className="text-xs font-semibold text-slate-800">No hay conversaciones</p>
-                <p className="text-[11px] text-slate-500">
-                  {searchQuery ? 'No coinciden conversaciones con tu búsqueda.' : 'No hay clientes en este filtro.'}
-                </p>
+              <div className="p-8 text-center text-xs text-slate-500 space-y-1">
+                <CheckCircle2 className="w-6 h-6 text-slate-300 mx-auto mb-2" />
+                <p className="font-semibold text-slate-700">No hay conversaciones en esta categoría</p>
+                <p className="text-[11px] text-slate-400">Todo el trabajo de esta sección está completado</p>
               </div>
-            ) : filteredSessions.map((session: any) => {
-              const isSelected = activeSessionId === session.id;
-              const lastMsg = session.messages?.[session.messages.length - 1];
-              const isPending = session.status === 'HUMAN_REQUESTED';
-              const isHumanControl = session.status === 'HUMAN_CONTROL';
+            ) : (
+              filteredSessions.map((session) => {
+                const isActive = session.id === activeSessionId;
+                const lastMsg = session.messages?.[session.messages.length - 1];
+                const isNeedAttention = session.status === 'HUMAN_REQUIRED' || session.status === 'HUMAN_REQUESTED';
+                const isHumanActive = session.status === 'HUMAN_ACTIVE' || session.status === 'HUMAN_CONTROL';
+                const isResolved = session.status === 'RESOLVED' || session.status === 'CLOSED';
 
-              return (
-                <div 
-                  key={session.id} 
-                  onClick={() => { setActiveSessionId(session.id); setShowListOnMobile(false); }}
-                  className={`p-3.5 cursor-pointer transition-colors relative ${
-                    isSelected ? 'bg-blue-50/60' : 'bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold text-xs text-slate-900 flex items-center gap-1.5">
-                      <Phone className="w-3 h-3 text-slate-400" />
-                      {session.customerPhone || 'Cliente WhatsApp'}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {new Date(session.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                return (
+                  <div
+                    key={session.id}
+                    onClick={() => {
+                      setActiveSessionId(session.id);
+                      setShowListOnMobile(false);
+                      setShowReturnConfirm(false);
+                    }}
+                    className={`p-3.5 cursor-pointer transition-all border-l-4 ${
+                      isActive 
+                        ? 'bg-blue-50/40 border-l-blue-600' 
+                        : isNeedAttention
+                        ? 'bg-amber-50/30 border-l-amber-500 hover:bg-amber-50/50'
+                        : 'border-l-transparent hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-bold text-xs text-slate-900 truncate">
+                          {session.customerIdentifier || 'Cliente WhatsApp'}
+                        </span>
+                        <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded-md uppercase shrink-0">
+                          {session.channelConnection?.provider || 'WhatsApp'}
+                        </span>
+                      </div>
+                      
+                      <span className="text-[10px] text-slate-400 shrink-0">
+                        {new Date(session.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    {/* MENSAJE PREVIO */}
+                    <p className="text-xs text-slate-600 truncate mb-2 font-normal">
+                      {lastMsg ? lastMsg.content : 'Sin mensajes'}
+                    </p>
+
+                    {/* BADGES CLAROS DE ESTADO Y RESPONSABILIDAD */}
+                    <div className="flex flex-col gap-1">
+                      {isNeedAttention && (
+                        <div className="space-y-1">
+                          <div className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md">
+                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                            <span>Requiere atención</span>
+                          </div>
+                          {session.humanReason && (
+                            <p className="text-[11px] font-semibold text-amber-900 bg-amber-50 p-1.5 rounded-md border border-amber-200/60 leading-tight">
+                              Motivo: {session.humanReason}
+                            </p>
+                          )}
+                          <span className="text-[10px] text-amber-700 font-semibold flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-amber-600" />
+                            Esperando respuesta · {getWaitingTimeFormatted(session.waitingSince || session.updatedAt)}
+                          </span>
+                        </div>
+                      )}
+
+                      {isHumanActive && !isNeedAttention && (
+                        <div className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-800 bg-blue-100/80 px-2 py-0.5 rounded-md self-start">
+                          <User className="w-3 h-3 text-blue-600" />
+                          <span>Atendido por ti</span>
+                        </div>
+                      )}
+
+                      {!isNeedAttention && !isHumanActive && !isResolved && (
+                        <div className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md self-start">
+                          <Bot className="w-3 h-3 text-blue-600" />
+                          <span>Gestionada por IA</span>
+                        </div>
+                      )}
+
+                      {isResolved && (
+                        <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md self-start">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Resuelta</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  <p className="text-xs text-slate-500 truncate mb-2 pr-2">
-                    {lastMsg?.content || 'Sin mensajes recientes'}
-                  </p>
-
-                  <div className="flex items-center gap-2">
-                    {isPending && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                        Necesita atención
-                      </span>
-                    )}
-                    {isHumanControl && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                        Atendido por ti
-                      </span>
-                    )}
-                    {!isPending && !isHumanControl && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        Resuelta por el asistente
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
-        {/* PANEL DERECHO: DETALLE Y VISTA DEL CHAT */}
-        <div className={`flex-1 flex flex-col bg-white ${!showListOnMobile ? 'flex' : 'hidden md:flex'}`}>
+        {/* PANEL DERECHO: DETALLE DE CONVERSACIÓN Y ACCIONES */}
+        <div className={`flex-1 flex-col bg-white ${showListOnMobile ? 'hidden md:flex' : 'flex w-full'}`}>
           {activeSession ? (
             <>
-              {/* CHAT HEADER */}
-              <div className="h-14 border-b border-slate-200 flex justify-between items-center px-4 md:px-6 bg-white flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={() => setShowListOnMobile(true)}
-                    className="md:hidden text-slate-400 hover:text-slate-600 p-1"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
-                  
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      {activeSession.customerPhone || 'Cliente WhatsApp'}
-                      <span className="text-[10px] font-medium text-slate-400">WhatsApp</span>
-                    </h2>
-                    <p className="text-[10px] text-slate-500">
-                      ID: {activeSession.id.substring(0, 12)}...
-                    </p>
+              {/* ENCABEZADO DE CONVERSACIÓN ABIERTA */}
+              <div className="p-4 border-b border-slate-200 bg-white flex flex-col gap-3 shrink-0">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setShowListOnMobile(true)} 
+                      className="md:hidden p-1 text-slate-500 hover:text-slate-900"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    
+                    <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                      {activeSession.customerIdentifier?.charAt(0).toUpperCase() || 'C'}
+                    </div>
+
+                    <div>
+                      <h2 className="font-bold text-sm text-slate-900">
+                        {activeSession.customerIdentifier || 'Cliente WhatsApp'}
+                      </h2>
+                      <p className="text-[11px] text-slate-500">
+                        Canal: {activeSession.channelConnection?.provider || 'WhatsApp'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* ESTADO ACTUAL Y ACCIÓN PRINCIPAL DE CONTROL */}
+                  <div className="flex items-center gap-2">
+                    {activeSession.status === 'HUMAN_REQUIRED' && (
+                      <button 
+                        onClick={() => executeHandoff('take_control')}
+                        className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <User className="w-4 h-4" />
+                        Tomar el control
+                      </button>
+                    )}
+
+                    {activeSession.controlBy === 'AI' && activeSession.status !== 'HUMAN_REQUIRED' && activeSession.status !== 'RESOLVED' && (
+                      <button 
+                        onClick={() => executeHandoff('take_control')}
+                        className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <User className="w-4 h-4" />
+                        Tomar el control
+                      </button>
+                    )}
+
+                    {activeSession.controlBy === 'HUMAN' && (
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setShowReturnConfirm(true)}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-blue-600" />
+                          Devolver a la IA
+                        </button>
+
+                        <button 
+                          onClick={() => executeHandoff('resolve')}
+                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          Resolver
+                        </button>
+                      </div>
+                    )}
+
+                    {activeSession.status === 'RESOLVED' && (
+                      <button 
+                        onClick={() => executeHandoff('return_ai')}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                      >
+                        Reabrir con IA
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {activeSession.status === 'HUMAN_CONTROL' ? (
-                    <button 
-                      onClick={() => handleHandoff('return_ai')}
-                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Bot className="w-3.5 h-3.5" />
-                      Devolver a la IA
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => handleHandoff('take_control')}
-                      className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <User className="w-3.5 h-3.5" />
-                      Tomar control
-                    </button>
-                  )}
+                {/* BANNER DE CONTROL DE RESPONSABILIDAD */}
+                {activeSession.controlBy === 'HUMAN' ? (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs flex items-center justify-between text-blue-900 font-medium">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span><strong>Estás atendiendo esta conversación.</strong> La IA permanecerá en pausa mientras tengas el control.</span>
+                    </div>
+                  </div>
+                ) : activeSession.status === 'HUMAN_REQUIRED' ? (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs space-y-1 text-amber-900">
+                    <div className="flex items-center gap-2 font-bold">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>⚠️ Esta conversación necesita tu atención ahora.</span>
+                    </div>
+                    {activeSession.humanReason && (
+                      <p className="text-xs text-amber-800 pl-6">
+                        <strong>Motivo:</strong> {activeSession.humanReason}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs flex items-center gap-2 text-slate-600 font-medium">
+                    <Bot className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span><strong>La IA está atendiendo esta conversación.</strong> Si necesitas intervenir, pulsa "Tomar el control".</span>
+                  </div>
+                )}
 
-                  {activeSession.status !== 'CLOSED' && (
-                    <button 
-                      onClick={() => handleHandoff('close_session')}
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-                    >
-                      Cerrar
-                    </button>
-                  )}
-                </div>
+                {/* POPUP/CONFIRMACIÓN LIGERA DE DEVOLUCIÓN A LA IA */}
+                {showReturnConfirm && (
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-2 animate-in fade-in slide-in-from-top-2">
+                    <p className="font-bold text-amber-900">¿Devolver esta conversación a la IA?</p>
+                    <p className="text-amber-800">La IA volverá a gestionar de forma automática los nuevos mensajes que envíe este cliente.</p>
+                    <div className="flex gap-2 justify-end pt-1">
+                      <button 
+                        onClick={() => setShowReturnConfirm(false)}
+                        className="px-3 py-1 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-md hover:bg-slate-50 cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        onClick={() => executeHandoff('return_ai')}
+                        className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-md hover:bg-blue-700 cursor-pointer"
+                      >
+                        Confirmar devolución a IA
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* LISTA DE MENSAJES */}
-              <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 bg-slate-50/50">
-                {activeSession.messages?.map((msg: any, index: number) => {
-                  const isUser = msg.role === 'user';
-                  const isInternal = msg.role === 'internal_note';
+              {/* BLOQUE CONTEXTO "RESUMEN DE LA IA" (SI APLICA) */}
+              {(activeSession.status === 'HUMAN_REQUIRED' || activeSession.humanReason) && (
+                <div className="m-4 p-4 bg-slate-900 text-white rounded-xl shadow-xs space-y-2 text-xs shrink-0">
+                  <div className="flex items-center gap-2 text-blue-400 font-bold">
+                    <Sparkles className="w-4 h-4 text-blue-400" />
+                    <span>Resumen de la IA</span>
+                  </div>
                   
-                  if (isInternal) {
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 text-slate-300">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">La IA ha entendido:</p>
+                      <p className="font-medium text-white">{activeSession.aiSummary?.intent || 'Consulta de cliente'}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Motivo de no resolución:</p>
+                      <p className="font-medium text-amber-300">{activeSession.humanReason || 'Requiere intervención humana'}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Información relevante:</p>
+                      <p className="font-medium text-slate-200">{activeSession.aiSummary?.relevantData || 'Ver historial adjunto'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CHAT MESSAGES STREAM */}
+              <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#F8FAFC]">
+                {activeSession.messages?.map((msg: any, idx: number) => {
+                  const isUser = msg.role === 'user';
+                  const isSystem = msg.role === 'system';
+                  const isNote = msg.role === 'internal_note';
+
+                  if (isSystem) {
                     return (
-                      <div key={index} className="mx-auto max-w-md bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 shadow-xs">
-                        <div className="flex items-center gap-1.5 mb-1 font-bold text-amber-800">
-                          <Lock className="w-3.5 h-3.5" />
-                          Nota interna (visible solo para el equipo)
+                      <div key={idx} className="flex justify-center my-2">
+                        <span className="text-[10px] font-semibold text-slate-500 bg-slate-200/60 px-3 py-1 rounded-full">
+                          {msg.content}
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  if (isNote) {
+                    return (
+                      <div key={idx} className="flex justify-center my-2">
+                        <div className="max-w-[85%] bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 text-xs space-y-1 shadow-2xs">
+                          <span className="font-bold text-[10px] uppercase text-amber-700 block">📌 Nota Interna</span>
+                          <p>{msg.content}</p>
                         </div>
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
                       </div>
                     );
                   }
 
                   return (
-                    <div 
-                      key={index} 
-                      className={`flex flex-col ${isUser ? 'items-start' : 'items-end'}`}
-                    >
-                      <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs shadow-xs ${
+                    <div key={idx} className={`flex ${isUser ? 'justify-start' : 'justify-end'}`}>
+                      <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-xs shadow-2xs ${
                         isUser 
-                          ? 'bg-white border border-slate-200 text-slate-900 rounded-tl-xs' 
-                          : 'bg-blue-600 text-white rounded-tr-xs'
+                          ? 'bg-white border border-slate-200 text-slate-900 rounded-tl-none' 
+                          : 'bg-blue-600 text-white rounded-tr-none font-medium'
                       }`}>
+                        <div className="flex items-center justify-between gap-4 mb-1 text-[10px] opacity-75">
+                          <span className="font-bold">
+                            {isUser ? activeSession.customerIdentifier || 'Cliente' : 'Atención humana / IA'}
+                          </span>
+                          <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
                         {renderMessageContent(msg)}
                       </div>
-                      
-                      <span className="text-[10px] text-slate-400 mt-1 px-1 font-mono">
-                        {isUser ? 'Cliente' : 'Asistente IA'} • {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </span>
                     </div>
                   );
                 })}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* CAJA DE ENVIAR MENSAJE */}
-              <div className="p-3.5 border-t border-slate-200 bg-white space-y-2">
+              {/* BLOQUE DE RESPUESTA SUGERIDA POR LA IA */}
+              {activeSession.suggestedReply && activeSession.controlBy === 'HUMAN' && (
+                <div className="p-3 bg-blue-50/60 border-t border-blue-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shrink-0">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-blue-900">Respuesta sugerida por la IA:</p>
+                      <p className="text-slate-700 italic mt-0.5">"{activeSession.suggestedReply}"</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 self-end sm:self-auto shrink-0">
+                    <button 
+                      onClick={() => setReplyText(activeSession.suggestedReply)}
+                      className="px-2.5 py-1 bg-white border border-blue-200 text-blue-700 text-xs font-semibold rounded-md hover:bg-blue-50 cursor-pointer"
+                    >
+                      Usar texto
+                    </button>
+                    <button 
+                      onClick={() => handleSendMessage(activeSession.suggestedReply)}
+                      className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-md hover:bg-blue-700 cursor-pointer"
+                    >
+                      Enviar respuesta
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* BARRA DE COMPOSICIÓN DE MENSAJES */}
+              <div className="p-3.5 bg-white border-t border-slate-200 space-y-2.5 shrink-0">
                 <div className="flex items-center justify-between">
-                  <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={isInternalNote} 
-                      onChange={(e) => setIsInternalNote(e.target.checked)}
-                      className="rounded text-blue-600 focus:ring-blue-500 border-slate-300" 
-                    />
-                    <span>Nota interna</span>
-                  </label>
-                  
-                  {activeSession.status === 'HUMAN_REQUESTED' && (
-                    <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                      Cliente esperando respuesta
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setIsInternalNote(false)}
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        !isInternalNote ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      Respuesta al cliente
+                    </button>
+                    <button 
+                      onClick={() => setIsInternalNote(true)}
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        isInternalNote ? 'bg-amber-500 text-white' : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      📌 Nota interna
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex gap-2">
-                  <textarea 
+                  <textarea
+                    rows={2}
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     onKeyDown={(e) => {
@@ -456,76 +691,35 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
                         handleSendMessage();
                       }
                     }}
-                    placeholder={isInternalNote ? "Escribe una nota privada para tu equipo..." : "Escribe una respuesta para el cliente..."}
-                    rows={2}
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent resize-none"
+                    placeholder={
+                      isInternalNote 
+                        ? 'Escribe una nota interna para tu equipo...' 
+                        : activeSession.controlBy === 'AI' 
+                        ? 'Al enviar un mensaje tomarás el control automático...' 
+                        : 'Escribe tu respuesta al cliente...'
+                    }
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"
                   />
                   <button 
-                    onClick={handleSendMessage}
-                    disabled={!replyText.trim() || isSending}
-                    className="self-end px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    onClick={() => handleSendMessage()}
+                    disabled={isSending || !replyText.trim()}
+                    className="px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all flex items-center justify-center shadow-xs cursor-pointer"
                   >
-                    <Send className="w-3.5 h-3.5" />
-                    Enviar
+                    <Send className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50/50">
-              <MessageSquare className="w-12 h-12 text-slate-300 mb-3" />
-              <h3 className="text-sm font-bold text-slate-800 mb-1">Selecciona una conversación</h3>
-              <p className="text-xs text-slate-500 max-w-xs">
-                Haz clic en cualquier chat de la lista de la izquierda para ver los mensajes y responder.
-              </p>
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-2">
+              <MessageSquare className="w-10 h-10 text-slate-300" />
+              <p className="font-bold text-slate-700 text-sm">Selecciona una conversación</p>
+              <p className="text-xs text-slate-500 max-w-xs">Supervisa las conversaciones de tus clientes o responde a los casos que requieren atención.</p>
             </div>
           )}
         </div>
 
       </div>
-
-      {/* MODAL AUTOPILOTO (DEVOLVER A LA IA) */}
-      <Dialog open={showAutopilotModal} onOpenChange={setShowAutopilotModal}>
-        <DialogContent className="bg-white border border-slate-200 rounded-xl p-6 shadow-lg max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Bot className="w-5 h-5 text-blue-600" />
-              Devolver control al Asistente
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 mt-1">
-              La IA volverá a responder automáticamente a este cliente por WhatsApp. Puedes añadir una instrucción puntual para orientarla.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="my-4">
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Instrucción puntual (Opcional)
-            </label>
-            <textarea 
-              value={autopilotInstruction}
-              onChange={(e) => setAutopilotInstruction(e.target.value)}
-              placeholder="Ej: 'Informa al cliente de que su pedido saldrá mañana por la mañana.'"
-              rows={3}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none resize-none"
-            />
-          </div>
-
-          <DialogFooter className="flex gap-2">
-            <button 
-              onClick={() => setShowAutopilotModal(false)}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button 
-              onClick={() => executeHandoff('return_ai', autopilotInstruction)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
-            >
-              Reactivar Autopiloto
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -5,6 +5,12 @@ export declare function getOrCreateSession(commerceId: string, customerIdentifie
     createdAt: Date;
     channelConnectionId: string;
     customerIdentifier: string;
+    controlBy: string;
+    humanReason: string | null;
+    aiSummary: import("@prisma/client/runtime/library").JsonValue | null;
+    suggestedReply: string | null;
+    waitingSince: Date | null;
+    assignedUserId: string | null;
     isTest: boolean;
     context: string | null;
     updatedAt: Date;
