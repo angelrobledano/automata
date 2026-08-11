@@ -22,7 +22,16 @@ export async function GET(request: Request) {
       }
     }
 
-    const commerce = await prisma.commerce.findUnique({ where: { id: commerceId } });
+    const commerce = await prisma.commerce.findUnique({
+      where: { id: commerceId },
+      include: {
+        channelConnections: true,
+        _count: {
+          select: { knowledgeSources: true, users: true }
+        }
+      }
+    });
+
     if (!commerce) return NextResponse.json({ error: 'No commerce found' }, { status: 404 });
 
     let dateFilter: any = undefined;
@@ -44,7 +53,7 @@ export async function GET(request: Request) {
       dateFilter = { gte: last30 };
       daysForChart = 30;
     } else if (period === 'all') {
-      daysForChart = 30; // Max 30 points for the chart to not overflow
+      daysForChart = 30;
     }
 
     const sessions = await prisma.session.findMany({
@@ -53,7 +62,8 @@ export async function GET(request: Request) {
         isTest: false,
         ...(dateFilter && { updatedAt: dateFilter })
       },
-      include: { messages: true }
+      include: { messages: { orderBy: { createdAt: 'desc' } } },
+      orderBy: { updatedAt: 'desc' }
     });
 
     let totalMessages = 0;
@@ -71,7 +81,7 @@ export async function GET(request: Request) {
       if (session.status === 'HUMAN_REQUESTED') {
         pendingCount++;
       } else if (session.status === 'HUMAN_CONTROL') {
-        const lastMessage = session.messages[session.messages.length - 1];
+        const lastMessage = session.messages[0];
         if (lastMessage && lastMessage.role === 'user') {
           pendingCount++;
         }
@@ -90,19 +100,19 @@ export async function GET(request: Request) {
 
     const totalConversations = sessions.length;
     const aiResolvedConversations = totalConversations - humanSessions;
-    const automationRate = totalConversations > 0 ? ((aiResolvedConversations / totalConversations) * 100).toFixed(1) : 0;
+    const automationRate = totalConversations > 0 ? Number(((aiResolvedConversations / totalConversations) * 100).toFixed(0)) : 0;
     
-    // Calculamos horas recuperadas: 2 min (120 seg) ahorrados por cada mensaje que responde la IA
+    // Calculamos tiempo ahorrado: 2 min por mensaje respondido por IA
     const minutesSaved = aiMessages * 2;
+    const hoursPart = Math.floor(minutesSaved / 60);
+    const minsPart = minutesSaved % 60;
+    const timeSavedFormatted = hoursPart > 0 ? `${hoursPart} h ${minsPart} min` : `${minsPart} min`;
     const hoursSaved = (minutesSaved / 60).toFixed(1);
-
-    // Calculamos coste evitado: 15€/h * horas ahorradas
     const moneySaved = (parseFloat(hoursSaved) * 15).toFixed(2);
 
     // Gráfico dinámico
     const chartDataMap: Record<string, { total: number, ai: number }> = {};
     
-    // Rellenamos el mapa con 0
     for (let i = daysForChart - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -126,6 +136,7 @@ export async function GET(request: Request) {
       ai: data.ai
     }));
 
+    // Insights / Oportunidades
     let insights = await prisma.insight.findMany({
       where: { commerceId: commerce.id, isResolved: false },
       orderBy: { createdAt: 'desc' }
@@ -137,7 +148,7 @@ export async function GET(request: Request) {
           commerceId: commerce.id,
           type: 'MISSING_KNOWLEDGE',
           title: 'Preguntas frecuentes sobre Devoluciones',
-          description: 'Hemos detectado que 15 clientes preguntan por devoluciones. ¿Quieres añadir una política de devoluciones al Cerebro con 1 clic?',
+          description: 'Hemos detectado que 15 clientes preguntan por devoluciones. ¿Quieres añadir una política de devoluciones con 1 clic?',
           actionLabel: 'Añadir política',
           actionData: {
             title: 'Política de Devoluciones (Generada)',
@@ -149,11 +160,51 @@ export async function GET(request: Request) {
       insights = [mockInsight];
     }
 
+    // Actividad reciente (los últimos 5 mensajes significativos)
+    const recentActivity: Array<{ id: string; time: string; text: string; type: 'ai' | 'human' | 'warning' }> = [];
+    let activityCount = 0;
+    for (const session of sessions) {
+      for (const msg of session.messages) {
+        if (activityCount >= 5) break;
+        const timeStr = new Date(msg.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        if (msg.role === 'assistant') {
+          recentActivity.push({
+            id: msg.id,
+            time: timeStr,
+            text: msg.content.length > 60 ? msg.content.substring(0, 60) + '...' : msg.content,
+            type: 'ai'
+          });
+          activityCount++;
+        } else if (session.status === 'HUMAN_REQUESTED') {
+          recentActivity.push({
+            id: msg.id,
+            time: timeStr,
+            text: 'Un cliente solicitó atención de una persona.',
+            type: 'warning'
+          });
+          activityCount++;
+        }
+      }
+      if (activityCount >= 5) break;
+    }
+
+    // Estado del Asistente
+    const waConnected = commerce.channelConnections.some(conn => conn.provider === 'META' && conn.status === 'CONNECTED');
+    const assistantStatus = {
+      isWorking: waConnected || sessions.length > 0,
+      waConnected,
+      knowledgeCount: commerce._count.knowledgeSources,
+      hasKnowledge: commerce._count.knowledgeSources > 0,
+      onboardingCompleted: commerce.onboardingCompleted,
+      lastActivityAt: sessions[0]?.updatedAt ? new Date(sessions[0].updatedAt).toISOString() : null
+    };
+
     return NextResponse.json({
       totalConversations,
       aiResolvedConversations,
       automationRate,
       hoursSaved,
+      timeSavedFormatted,
       moneySaved,
       totalMessages,
       aiMessages,
@@ -161,7 +212,9 @@ export async function GET(request: Request) {
       totalTokens,
       totalCost,
       insights,
-      pendingCount
+      pendingCount,
+      recentActivity,
+      assistantStatus
     });
 
   } catch (error: any) {

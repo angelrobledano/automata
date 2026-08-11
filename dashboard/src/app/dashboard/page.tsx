@@ -3,12 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
-  LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer 
 } from 'recharts';
 import { 
-  TrendingUp, Clock, Euro, Users, ArrowUpRight, Zap, Sparkles, MessageSquare, AlertTriangle, ShieldCheck 
+  MessageSquare, CheckCircle2, Clock, Sparkles, Zap, ArrowRight, ShieldCheck, AlertCircle, RefreshCw, Layers
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { OnboardingWidget } from '@/components/OnboardingWidget';
 
 export default function DashboardPage() {
@@ -41,7 +40,10 @@ export default function DashboardPage() {
       const res = await fetch('/api/insights/resolve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ insightId: insight.id, action: insight.actionLabel === 'Añadir política' ? 'CREATE_KNOWLEDGE' : 'DISMISS' })
+        body: JSON.stringify({ 
+          insightId: insight.id, 
+          action: insight.actionLabel === 'Añadir política' ? 'CREATE_KNOWLEDGE' : 'DISMISS' 
+        })
       });
       if (res.ok) {
         fetchMetrics();
@@ -52,13 +54,12 @@ export default function DashboardPage() {
     setResolvingInsight(null);
   };
 
-
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center font-sans">
         <div className="flex flex-col items-center">
-          <span className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></span>
-          <p className="text-muted-foreground font-medium">Calculando el impacto de tu IA...</p>
+          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+          <p className="text-slate-500 text-xs font-semibold">Cargando estado de tu asistente...</p>
         </div>
       </div>
     );
@@ -66,280 +67,362 @@ export default function DashboardPage() {
 
   if (!metrics || metrics.error) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-foreground font-medium mb-2">No hemos podido cargar los datos.</p>
-          <p className="text-muted-foreground text-sm">Actualiza la página en unos instantes.</p>
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center font-sans">
+        <div className="text-center bg-white border border-slate-200 p-8 rounded-xl max-w-md shadow-sm">
+          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+          <p className="text-slate-900 font-bold mb-1">No hemos podido cargar la información.</p>
+          <p className="text-slate-500 text-xs mb-4">Revisa tu conexión a internet o intenta actualizar la página.</p>
+          <button 
+            onClick={fetchMetrics} 
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
+          >
+            Reintentar
+          </button>
         </div>
       </div>
     );
   }
 
+  const isWorking = metrics.assistantStatus?.isWorking || metrics.totalConversations > 0;
+  const hasEnoughDataForChart = metrics.totalConversations > 0;
+
   return (
-    <div className="max-w-5xl mx-auto py-6 px-6 font-sans pb-12">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Resumen de Rendimiento</h1>
-          <p className="text-muted-foreground mt-1">Aquí tienes el impacto de tu asistente calculado en tiempo real.</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <select 
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="bg-card border border-border text-muted-foreground text-sm font-semibold rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-none cursor-pointer"
-          >
-            <option value="today">Hoy</option>
-            <option value="7d">Últimos 7 días</option>
-            <option value="30d">Últimos 30 días</option>
-            <option value="all">Todo el tiempo</option>
-          </select>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-full border border-green-100 shadow-none">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span className="text-xs font-semibold text-green-700">Asistente Activo</span>
-          </div>
-        </div>
-      </div>
-
-      {/* GAMIFICATION ONBOARDING */}
-      <OnboardingWidget />
-
-      {/* INSIGHTS PREDICTIVOS */}
-      {metrics?.insights && metrics.insights.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-indigo-500" />
-            <h2 className="text-lg font-bold text-foreground">Insights Predictivos</h2>
-            <span className="bg-primary/20 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">BETA</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {metrics.insights.map((insight: any) => (
-              <div key={insight.id} className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-lg p-5 shadow-none relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500 rounded-full blur-3xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
-                <h3 className="font-bold text-foreground mb-2 relative z-10">{insight.title}</h3>
-                <p className="text-sm text-muted-foreground mb-5 relative z-10">{insight.description}</p>
-                {insight.actionLabel && (
-                  <button 
-                    onClick={() => handleResolveInsight(insight)}
-                    disabled={resolvingInsight === insight.id}
-                    className="relative z-10 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-none flex items-center gap-2"
-                  >
-                    {resolvingInsight === insight.id ? (
-                      <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    ) : (
-                      <span>✨</span>
-                    )}
-                    {resolvingInsight === insight.id ? 'Aplicando...' : insight.actionLabel}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* SECCIÓN 1: EL HÉROE EMOCIONAL */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ duration: 0.5 }}
-        className="relative overflow-hidden bg-indigo-900 rounded-lg p-6 mb-6 shadow-xl border border-indigo-800/50"
-      >
-        <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500 rounded-full blur-3xl opacity-50 animate-pulse"></div>
+    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-16">
+      <div className="max-w-6xl mx-auto py-8 px-6 space-y-6">
         
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-indigo-300" />
-            <h2 className="text-lg font-bold text-white">Lo que tu asistente ha logrado por ti</h2>
+        {/* HEADER PRINCIPAL */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Inicio</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Supervisa el estado y rendimiento de tu asistente virtual</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <motion.div 
-              whileHover={{ scale: 1.02, y: -2 }}
-              className="bg-indigo-800/50 backdrop-blur-sm border border-indigo-700/50 hover:border-indigo-500/80 hover:shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-all rounded-lg p-4 cursor-default"
+          <div className="flex items-center gap-3">
+            <select 
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg px-3 py-2 outline-none shadow-xs cursor-pointer focus:border-blue-600"
             >
-              <Clock className="w-6 h-6 text-indigo-300 mb-2" />
-              <h3 className="text-3xl font-extrabold text-white mb-1">{metrics.hoursSaved} horas</h3>
-              <p className="text-indigo-200 text-xs leading-relaxed">
-                Recuperadas en total respondiendo automáticamente a {metrics.aiMessages} mensajes de clientes.
-              </p>
-            </motion.div>
-            <motion.div 
-              whileHover={{ scale: 1.02, y: -2 }}
-              className="bg-indigo-800/50 backdrop-blur-sm border border-indigo-700/50 hover:border-amber-500/80 hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] transition-all rounded-lg p-4 cursor-default"
-            >
-              <Zap className="w-6 h-6 text-amber-300 mb-2" />
-              <h3 className="text-3xl font-extrabold text-white mb-1">{metrics.automationRate}% IA</h3>
-              <p className="text-indigo-200 text-xs leading-relaxed">
-                Tasa de automatización. Conversaciones resueltas sin que un humano intervenga.
-              </p>
-            </motion.div>
-            <motion.div 
-              whileHover={{ scale: 1.02, y: -2 }}
-              className="bg-indigo-800/50 backdrop-blur-sm border border-indigo-700/50 hover:border-green-400/80 hover:shadow-[0_0_15px_rgba(74,222,128,0.5)] transition-all rounded-lg p-4 cursor-default"
-            >
-              <Euro className="w-6 h-6 text-green-400 mb-2" />
-              <h3 className="text-3xl font-extrabold text-white mb-1">{metrics.totalCost?.toFixed(4) || '0.0000'} €</h3>
-              <p className="text-indigo-200 text-xs leading-relaxed">
-                Coste exacto de OpenAI consumiendo {metrics.totalTokens || 0} tokens.
-              </p>
-            </motion.div>
-          </div>
-        </div>
-      </motion.div>
+              <option value="today">Hoy</option>
+              <option value="7d">Últimos 7 días</option>
+              <option value="30d">Últimos 30 días</option>
+              <option value="all">Todo el tiempo</option>
+            </select>
 
-      {/* SECCIÓN 2: IMPACTO ECONÓMICO (BENTO BOX) */}
-      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1">Impacto Económico Directo</h3>
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
-      >
-        
-        <motion.div whileHover={{ y: -4 }} className="bg-card rounded-lg p-5 border border-gray-100 shadow-none hover:shadow-none transition-all flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-start mb-1 group relative">
-              <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1 cursor-help">
-                Coste de atención evitado
-                <span className="text-gray-400 border border-gray-300 rounded-full w-4 h-4 flex items-center justify-center text-[10px]">?</span>
-              </p>
-              <div className="absolute top-6 left-0 bg-gray-900 text-white text-xs p-3 rounded-lg w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl">
-                Se calcula asumiendo que cada respuesta del bot ahorra 2 minutos de trabajo a un agente humano, multiplicado por un salario base de 15€/hora.
-              </div>
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold ${
+              isWorking 
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' 
+                : 'bg-amber-50 text-amber-700 border-amber-200/80'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${isWorking ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+              <span>{isWorking ? 'Asistente activo' : 'Configuración pendiente'}</span>
             </div>
-            <h4 className="text-4xl font-extrabold text-foreground tracking-tight mb-1">{metrics.moneySaved} €</h4>
-            <p className="text-[10px] text-muted-foreground">Basado en un coste operativo de 15€/hora.</p>
-          </div>
-          <div className="mt-4 pt-3 border-t border-gray-50">
-            <p className="text-xs text-muted-foreground font-medium">El valor del tiempo que tu equipo ahorró en teclear.</p>
-          </div>
-        </motion.div>
-
-        <motion.div whileHover={{ y: -4 }} className="bg-card rounded-lg p-5 border border-gray-100 shadow-none hover:shadow-none transition-all flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute right-[-20px] top-[-20px] opacity-5">
-            <Zap className="w-32 h-32 text-primary" />
-          </div>
-          <div className="relative z-10">
-            <div className="flex justify-between items-start mb-1 group relative">
-              <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1 cursor-help">
-                Tasa de Automatización
-                <span className="text-gray-400 border border-gray-300 rounded-full w-4 h-4 flex items-center justify-center text-[10px]">?</span>
-              </p>
-              <div className="absolute top-6 left-0 bg-gray-900 text-white text-xs p-3 rounded-lg w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl">
-                El porcentaje de chats totales en los que el cliente fue atendido exitosamente de principio a fin sin pedir hablar con un humano.
-              </div>
-            </div>
-            <h4 className="text-4xl font-extrabold text-primary tracking-tight mb-1">{metrics.automationRate}%</h4>
-            <p className="text-[10px] text-muted-foreground">De {metrics.totalConversations} conversaciones totales.</p>
-          </div>
-          <div className="mt-4 pt-3 border-t border-gray-50 relative z-10">
-            <p className="text-xs text-muted-foreground font-medium">Clientes que no necesitaron ayuda de un humano.</p>
-          </div>
-        </motion.div>
-
-        <motion.div whileHover={{ y: -4 }} className="bg-card rounded-lg p-5 border border-gray-100 shadow-none hover:shadow-none transition-all flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-start mb-1 group relative">
-              <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1 cursor-help">
-                Ventas estimadas por IA 
-                <span className="text-gray-400 border border-gray-300 rounded-full w-4 h-4 flex items-center justify-center text-[10px]">?</span>
-              </p>
-              <div className="absolute top-6 left-0 bg-gray-900 text-white text-xs p-3 rounded-lg w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl">
-                Se calcula asumiendo una conversión media de 12.5€ por cada consulta resuelta de manera exitosa sin intervención humana, basándose en la tasa de cierre habitual del sector.
-              </div>
-            </div>
-            <h4 className="text-4xl font-extrabold text-foreground tracking-tight mb-1">{metrics.salesGenerated} €</h4>
-            <p className="text-[10px] text-muted-foreground">Basado en {metrics.aiResolvedConversations} chats resueltos.</p>
-          </div>
-          <div className="mt-4 pt-3 border-t border-gray-50">
-            <p className="text-xs text-muted-foreground font-medium">Valor retenido por responder al instante.</p>
-          </div>
-        </motion.div>
-
-      </motion.div>
-
-      {/* SECCIÓN 4: GRÁFICOS Y RENDIMIENTO OPERATIVO */}
-      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1">Rendimiento Operativo</h3>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        
-        {/* Gráfico de Área */}
-        <div className="lg:col-span-2 bg-card rounded-lg p-5 border border-gray-100 shadow-none">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h4 className="text-sm font-bold text-foreground">Volumen de Mensajes (Últimos 7 días)</h4>
-              <p className="text-[10px] text-muted-foreground">Mensajes recibidos vs respondidos por IA.</p>
-            </div>
-            <div className="flex gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-200"></span>
-                <span className="text-[10px] font-medium text-muted-foreground">Total</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-primary"></span>
-                <span className="text-[10px] font-medium text-muted-foreground">Por IA</span>
-              </div>
-            </div>
-          </div>
-          <div className="h-[200px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={metrics.chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorAi" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <RechartsTooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  labelStyle={{ fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}
-                />
-                <Area type="monotone" dataKey="total" stroke="#c7d2fe" fill="transparent" strokeWidth={2} />
-                <Area type="monotone" dataKey="ai" stroke="#4f46e5" fill="url(#colorAi)" strokeWidth={3} />
-              </AreaChart>
-            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Canales y Salud */}
-        <div className="bg-card rounded-lg p-5 border border-gray-100 shadow-none flex flex-col justify-between">
-          <div>
-            <h4 className="text-sm font-bold text-foreground mb-4">Salud del Asistente</h4>
+        {/* HERO / RESUMEN SUPERIOR (NIVEL 1: ¿Está funcionando?) */}
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <div className="p-1 rounded-md bg-blue-50 text-blue-600">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900">
+                {isWorking ? 'Tu asistente está funcionando' : 'Tu asistente está casi listo'}
+              </h2>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed font-normal">
+              {metrics.totalConversations > 0 ? (
+                <>
+                  Ha atendido <strong className="text-slate-900 font-semibold">{metrics.totalConversations} conversaciones</strong> esta semana y ha resuelto automáticamente el <strong className="text-emerald-600 font-semibold">{metrics.automationRate}%</strong>.
+                </>
+              ) : (
+                'Completa la configuración para que tu asistente comience a responder a tus clientes automáticamente.'
+              )}
+            </p>
+          </div>
+
+          {!metrics.assistantStatus?.onboardingCompleted && (
+            <Link 
+              href="/ajustes" 
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors whitespace-nowrap active:scale-95 cursor-pointer"
+            >
+              Completar configuración
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
+        </div>
+
+        {/* CHECKLIST VISUAL DE CONFIGURACIÓN */}
+        <OnboardingWidget />
+
+        {/* KPIs PRINCIPALES (NIVEL 3: Máximo 4 tarjetas súper limpias) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          {/* KPI 1: Conversaciones Atendidas */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-slate-300 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-slate-500">Conversaciones atendidas</span>
+              <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                <MessageSquare className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-slate-900 tracking-tight mb-1">
+              {metrics.totalConversations}
+            </div>
+            <p className="text-[11px] text-slate-500 font-normal">Atendidas esta semana</p>
+          </div>
+
+          {/* KPI 2: Consultas Resueltas Automáticamente */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-slate-300 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-slate-500">Consultas resueltas</span>
+              <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-slate-900 tracking-tight mb-1">
+              {metrics.aiResolvedConversations}
+            </div>
+            <p className="text-[11px] text-emerald-600 font-medium">
+              {metrics.automationRate}% resueltas automáticamente
+            </p>
+          </div>
+
+          {/* KPI 3: Tiempo Ahorrado */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-slate-300 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-slate-500">Tiempo ahorrado</span>
+              <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-slate-900 tracking-tight mb-1">
+              {metrics.timeSavedFormatted || '0 min'}
+            </div>
+            <p className="text-[11px] text-slate-500 font-normal">Estimación esta semana</p>
+          </div>
+
+          {/* KPI 4: Oportunidades Detectadas */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-slate-300 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-slate-500">Oportunidades detectadas</span>
+              <div className="p-1.5 rounded-lg bg-violet-50 text-violet-600">
+                <Sparkles className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-slate-900 tracking-tight mb-1">
+              {metrics.insights?.length || 0}
+            </div>
+            <p className="text-[11px] text-slate-500 font-normal">Sugerencias para tu negocio</p>
+          </div>
+
+        </div>
+
+        {/* OPORTUNIDADES PARA TU NEGOCIO (INSIGHTS ACCIONABLES - NIVEL 4) */}
+        {metrics.insights && metrics.insights.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-base">💡</span>
+              <h3 className="text-sm font-bold text-slate-900">Oportunidades para tu negocio</h3>
+            </div>
             
-            <div className="mb-4">
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="font-medium flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-green-500" /> Sin humano</span>
-                <span className="font-bold">{metrics.automationRate}%</span>
-              </div>
-              <div className="w-full bg-card h-1.5 rounded-full overflow-hidden">
-                <div className="bg-green-500 h-full rounded-full" style={{ width: `${metrics.automationRate}%` }}></div>
-              </div>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {metrics.insights.map((insight: any) => (
+                <div 
+                  key={insight.id} 
+                  className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-between"
+                >
+                  <div className="space-y-1.5 mb-4">
+                    <h4 className="text-sm font-bold text-slate-900 flex items-center justify-between">
+                      <span>{insight.title}</span>
+                      <span className="text-[10px] font-semibold bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full">Sugerencia</span>
+                    </h4>
+                    <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                      {insight.description}
+                    </p>
+                  </div>
 
+                  {insight.actionLabel && (
+                    <button 
+                      onClick={() => handleResolveInsight(insight)}
+                      disabled={resolvingInsight === insight.id}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer self-start"
+                    >
+                      {resolvingInsight === insight.id ? (
+                        <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                      ) : (
+                        <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
+                      )}
+                      {resolvingInsight === insight.id ? 'Guardando...' : insight.actionLabel}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* GRID DE DOS COLUMNAS: ESTADO DEL ASISTENTE + ACTIVIDAD RECIENTE */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* TARJETA 1: ESTADO DEL ASISTENTE (NIVEL 2) */}
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col justify-between space-y-4">
             <div>
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="font-medium flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5 text-indigo-500" /> WhatsApp</span>
-                <span className="font-bold">{metrics.totalConversations} chats</span>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-900">Estado del asistente</h3>
+                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${
+                  metrics.assistantStatus?.isWorking 
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${metrics.assistantStatus?.isWorking ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                  {metrics.assistantStatus?.isWorking ? 'Funcionando correctamente' : 'Requiere atención'}
+                </span>
               </div>
-              <div className="w-full bg-card h-1.5 rounded-full overflow-hidden">
-                <div className="bg-indigo-500 h-full rounded-full" style={{ width: '100%' }}></div>
+
+              <div className="space-y-3 divide-y divide-slate-100 text-xs">
+                <div className="pt-2 flex justify-between items-center">
+                  <span className="text-slate-600 font-medium">WhatsApp</span>
+                  <span className={`font-semibold flex items-center gap-1.5 ${metrics.assistantStatus?.waConnected ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    <span className={`w-2 h-2 rounded-full ${metrics.assistantStatus?.waConnected ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                    {metrics.assistantStatus?.waConnected ? 'Conectado' : 'No conectado'}
+                  </span>
+                </div>
+
+                <div className="pt-3 flex justify-between items-center">
+                  <span className="text-slate-600 font-medium">Información del negocio</span>
+                  <span className={`font-semibold flex items-center gap-1.5 ${metrics.assistantStatus?.hasKnowledge ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    <span className={`w-2 h-2 rounded-full ${metrics.assistantStatus?.hasKnowledge ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                    {metrics.assistantStatus?.hasKnowledge ? `${metrics.assistantStatus.knowledgeCount} documentos cargados` : 'Sin información'}
+                  </span>
+                </div>
+
+                <div className="pt-3 flex justify-between items-center">
+                  <span className="text-slate-600 font-medium">Catálogo de productos</span>
+                  <span className="font-semibold text-emerald-600 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Actualizado
+                  </span>
+                </div>
+
+                <div className="pt-3 flex justify-between items-center text-slate-500">
+                  <span>Última actividad</span>
+                  <span className="font-medium text-slate-700">
+                    {metrics.assistantStatus?.lastActivityAt 
+                      ? new Date(metrics.assistantStatus.lastActivityAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) 
+                      : 'Sin actividad reciente'}
+                  </span>
+                </div>
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="text-slate-500">¿Quieres ajustar cómo responde tu asistente?</span>
+              <Link href="/cerebro" className="font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                Editar información →
+              </Link>
             </div>
           </div>
 
-          <div className="mt-4 bg-background rounded-lg p-3 border border-gray-100 text-center">
-            <p className="text-[10px] text-muted-foreground mb-0.5">Tiempo de Respuesta IA</p>
-            <p className="text-lg font-extrabold text-foreground">1.2 seg</p>
-            <p className="text-[9px] text-green-600 font-semibold mt-0.5">35x más rápido que un humano</p>
+          {/* TARJETA 2: ACTIVIDAD RECIENTE (LIVE FEED) */}
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-900">Actividad reciente</h3>
+                <span className="text-[11px] font-semibold text-slate-400">Tiempo real</span>
+              </div>
+
+              {metrics.recentActivity && metrics.recentActivity.length > 0 ? (
+                <div className="space-y-3">
+                  {metrics.recentActivity.map((act: any) => (
+                    <div key={act.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-slate-50 border border-slate-100 text-xs">
+                      <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                        act.type === 'ai' ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}></span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-slate-800 font-medium truncate">{act.text}</p>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono flex-shrink-0">{act.time}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 space-y-2 bg-slate-50 border border-slate-100 rounded-lg p-4">
+                  <MessageSquare className="w-6 h-6 text-slate-300 mx-auto" />
+                  <p className="text-xs font-semibold text-slate-700">Todavía no tienes conversaciones recientes</p>
+                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                    Cuando tus clientes empiecen a escribir por WhatsApp, verás la actividad en tiempo real aquí.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="text-slate-500">¿Quieres ver todos los chats?</span>
+              <Link href="/conversaciones" className="font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                Ir a Conversaciones →
+              </Link>
+            </div>
           </div>
+
+        </div>
+
+        {/* NIVEL 6: GRÁFICA SIMPLIFICADA DE TENDENCIA */}
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Evolución de consultas</h3>
+              <p className="text-xs text-slate-500">Comparativa de conversaciones totales vs resueltas por IA</p>
+            </div>
+            {hasEnoughDataForChart && (
+              <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                  <span className="font-medium text-slate-600">Resueltas por IA</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+                  <span className="font-medium text-slate-600">Total consultas</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {!hasEnoughDataForChart ? (
+            <div className="text-center py-12 bg-slate-50 border border-slate-100 rounded-lg p-6 space-y-2">
+              <Layers className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <h4 className="text-sm font-bold text-slate-800">Todavía no hay suficientes conversaciones para mostrar tendencias</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Cuando tu asistente empiece a recibir mensajes en WhatsApp podrás ver cómo evoluciona la automatización día a día.
+              </p>
+            </div>
+          ) : (
+            <div className="h-[220px] w-full pt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={metrics.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorAiBlue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={8} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                  <RechartsTooltip 
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}
+                    labelStyle={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px', fontSize: '12px' }}
+                  />
+                  <Area type="monotone" dataKey="total" stroke="#cbd5e1" fill="transparent" strokeWidth={2} name="Total consultas" />
+                  <Area type="monotone" dataKey="ai" stroke="#2563eb" fill="url(#colorAiBlue)" strokeWidth={2.5} name="Resueltas por IA" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
       </div>
-
     </div>
   );
 }
