@@ -125,7 +125,17 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
   };
 
   useEffect(() => {
-    const socket = io('http://localhost:3001');
+    // Solo conectar a localhost si se ejecuta localmente en la maquina del desarrollador
+    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || (isLocalhost ? 'http://localhost:3001' : null);
+
+    if (!socketUrl) return;
+
+    const socket = io(socketUrl, {
+      autoConnect: true,
+      reconnection: true,
+      transports: ['websocket', 'polling']
+    });
     
     socket.on('new_message', (data) => {
       setSessions(prev => {
