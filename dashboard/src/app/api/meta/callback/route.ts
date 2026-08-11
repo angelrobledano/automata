@@ -10,31 +10,35 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Meta OAuth devolvió error:', url.searchParams.get('error_description'));
-      return NextResponse.redirect('/settings?integration_error=true');
+      return NextResponse.redirect(new URL('/ajustes?tab=canales&integration_error=true', request.url));
     }
 
     if (!code || !state) {
-      return new NextResponse('Missing code or state', { status: 400 });
+      return NextResponse.redirect(new URL('/ajustes?tab=canales&integration_error=missing_code', request.url));
     }
 
     // Decodificar el state para obtener el commerceId
-    const decodedState = Buffer.from(state, 'base64').toString('utf8');
-    const { commerceId } = JSON.parse(decodedState);
+    let commerceId = 'commerce-seed-id';
+    try {
+      const decodedState = Buffer.from(state, 'base64').toString('utf8');
+      const parsed = JSON.parse(decodedState);
+      if (parsed.commerceId) commerceId = parsed.commerceId;
+    } catch (e) {
+      console.error('Error decodificando state:', e);
+    }
 
-    // TODO: Obtener IP real del request headers
     const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
-    
-    // Asumimos un adminUserId o system para la auditoría (o extraido de sesión si estuviera disp.)
+    const hostOrigin = url.origin;
     const userId = 'SYSTEM_ADMIN';
 
     // Realizar el intercambio de tokens de forma segura
-    await exchangeCodeForTokens(code, commerceId, userId, ip);
+    await exchangeCodeForTokens(code, commerceId, userId, ip, hostOrigin);
 
-    // Redirigir al dashboard con éxito
-    return NextResponse.redirect('/settings?integration_success=meta');
+    // Redirigir a la pestaña de canales en Ajustes indicando éxito
+    return NextResponse.redirect(new URL('/ajustes?tab=canales&integration_success=meta', request.url));
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in Meta OAuth callback:', error);
-    return NextResponse.redirect('/settings?integration_error=true');
+    return NextResponse.redirect(new URL(`/ajustes?tab=canales&integration_error=${encodeURIComponent(error.message || 'error')}`, request.url));
   }
 }

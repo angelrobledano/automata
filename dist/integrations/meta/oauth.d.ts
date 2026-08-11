@@ -4,7 +4,7 @@ export declare function getMetaAppCredentials(hostOrigin?: string): {
     redirectUri: string;
 };
 export declare function getMetaLoginUrl(commerceId: string, hostOrigin?: string): string;
-export declare function exchangeCodeForTokens(code: string, commerceId: string, userId: string, ip: string): Promise<{
+export declare function exchangeCodeForTokens(code: string, commerceId: string, userId: string, ip: string, hostOrigin?: string): Promise<{
     id: string;
     commerceId: string;
     status: import(".prisma/client").$Enums.ConnectionStatus;
