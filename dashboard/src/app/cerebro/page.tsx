@@ -83,11 +83,16 @@ export default function CerebroPage() {
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
       if (data.success) {
-        setStatus(`✅ ¡Listo! La IA ha memorizado ${data.result.chunksProcessed} fragmentos de "${file.name}".`);
+        const countMsg = data.result?.chunksProcessed 
+          ? `${data.result.chunksProcessed} fragmentos de "${file.name}"` 
+          : `el archivo "${file.name}"`;
+        setStatus(`✅ ¡Listo! La IA ha memorizado ${countMsg}.`);
         fetchSources();
-      } else setStatus(`⚠️ ${data.error || 'No hemos podido leer este archivo. Asegúrate de que es un documento válido.'}`);
-    } catch (err) {
-      setStatus('⚠️ La subida se ha interrumpido. Comprueba tu conexión y vuelve a intentarlo.');
+      } else {
+        setStatus(`⚠️ ${data.error || 'No hemos podido leer este archivo. Asegúrate de que es un documento válido.'}`);
+      }
+    } catch (err: any) {
+      setStatus(`⚠️ ${err.message || 'La subida se ha interrumpido. Comprueba tu conexión y vuelve a intentarlo.'}`);
     } finally {
       setIsUploading(false);
     }
@@ -116,9 +121,11 @@ export default function CerebroPage() {
         setThreadCategory('GENERAL');
         setEditingSourceId(null);
         fetchSources();
-      } else setStatus(`⚠️ No hemos podido guardar los cambios. Revisa la información.`);
-    } catch (err) {
-      setStatus('⚠️ No hemos podido guardar el texto. Revisa tu conexión.');
+      } else {
+        setStatus(`⚠️ ${data.error || 'No hemos podido guardar los cambios. Revisa la información.'}`);
+      }
+    } catch (err: any) {
+      setStatus(`⚠️ ${err.message || 'No hemos podido guardar el texto. Revisa tu conexión.'}`);
     } finally {
       setIsSavingText(false);
     }

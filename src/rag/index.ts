@@ -210,11 +210,15 @@ export async function addTextThread(commerceId: string, title: string, text: str
   return { sourceId: source.id, chunksProcessed: results.length };
 }
 
-export async function updateTextThread(sourceId: string, title: string, text: string) {
+export async function updateTextThread(sourceId: string, title: string, text: string, category?: string) {
   // Update source
   await prisma.knowledgeSource.update({
     where: { id: sourceId },
-    data: { name: title, content: text }
+    data: { 
+      name: title, 
+      content: text,
+      ...(category && { category })
+    }
   });
 
   // Delete old chunks
