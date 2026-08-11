@@ -19,7 +19,6 @@ export async function PATCH(request: Request) {
     const updateData: any = {};
 
     if (waPhoneNumberId && waToken) {
-      // Validate Meta token before saving
       const checkUrl = `https://graph.facebook.com/v19.0/${waPhoneNumberId}`;
       const ping = await fetch(checkUrl, {
         headers: { 'Authorization': `Bearer ${waToken}` },
@@ -34,7 +33,6 @@ export async function PATCH(request: Request) {
     }
 
     if (wooUrl && wooConsumerKey && wooConsumerSecret) {
-      // Basic validation for WooCommerce URL
       if (!wooUrl.startsWith('https://')) {
         return NextResponse.json({ error: 'La URL de WooCommerce debe ser HTTPS' }, { status: 400 });
       }
@@ -54,5 +52,29 @@ export async function PATCH(request: Request) {
   } catch (error: any) {
     console.error('Error updating channels:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+    const payload = await verifyToken(token);
+    if (!payload) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+    const commerceId = payload.commerceId as string;
+    const url = new URL(request.url);
+    const provider = url.searchParams.get('provider') || 'META';
+
+    await prisma.channelConnection.deleteMany({
+      where: { commerceId, provider: provider as any }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting channel connection:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
