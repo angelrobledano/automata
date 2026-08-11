@@ -3,11 +3,11 @@ import { SignJWT, jwtVerify } from 'jose';
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-development';
 const key = new TextEncoder().encode(JWT_SECRET);
 
-export async function signToken(payload: any) {
+export async function signToken(payload: any, expirationTime: string = '24h') {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('24h')
+    .setExpirationTime(expirationTime)
     .sign(key);
 }
 

@@ -9,33 +9,50 @@ export async function GET() {
     const token = cookieStore.get('token')?.value;
 
     if (!token) {
-      // Inyección temporal de un usuario ficticio para evitar bloqueos en el testeo si no hay sesión
-      const testUser = await prisma.user.findFirst();
-      if (testUser) {
-        return NextResponse.json({
-          success: true,
-          user: {
-            id: testUser.id,
-            email: testUser.email,
-            role: testUser.role, // 'OWNER', 'ADMIN', 'AGENT'
-            commerceId: testUser.commerceId
-          }
-        });
-      }
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
     const payload = await verifyToken(token);
-    if (!payload) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!payload || !payload.userId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    // Fetch fresh commerce and user status
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId as string },
+      include: {
+        commerce: {
+          select: {
+            name: true,
+            status: true,
+            isLifetimeFree: true,
+            subscriptionStatus: true,
+            onboardingCompleted: true
+          }
+        }
+      }
+    });
+
+    if (!user || user.status === 'SUSPENDED') {
+      return NextResponse.json({ error: 'Cuenta suspendida o no encontrada' }, { status: 403 });
+    }
 
     return NextResponse.json({
       success: true,
       user: {
-        id: payload.userId,
-        email: payload.email,
-        role: payload.role,
-        commerceId: payload.commerceId
-      }
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        commerceId: user.commerceId,
+        commerceName: user.commerce.name,
+        commerceStatus: user.commerce.status,
+        isLifetimeFree: user.commerce.isLifetimeFree,
+        subscriptionStatus: user.commerce.subscriptionStatus,
+        onboardingCompleted: user.commerce.onboardingCompleted
+      },
+      isImpersonating: !!payload.isImpersonating,
+      impersonator: payload.impersonator || null
     });
   } catch (error: any) {
     console.error('Error fetching me:', error);

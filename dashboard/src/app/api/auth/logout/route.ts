@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function POST() {
-  const response = NextResponse.json({ success: true });
-  response.cookies.delete('token');
-  return response;
+  const cookieStore = await cookies();
+  cookieStore.set('token', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0
+  });
+
+  return NextResponse.json({ success: true });
 }

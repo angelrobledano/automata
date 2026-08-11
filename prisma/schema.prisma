@@ -45,6 +45,7 @@ model Commerce {
   billingCustomerId      String?       @unique
   billingSubscriptionId  String?       @unique
   subscriptionStatus     String        @default("INACTIVE") // INACTIVE, ACTIVE, PAST_DUE, CANCELED
+  status                 String        @default("ACTIVE")   // ACTIVE, TRIAL, SUSPENDED, CANCELED
   providerMetadata       Json?
   overageBehavior        String        @default("HARD_LIMIT") // "HARD_LIMIT" o "METERED_BILLING"
   onboardingCompleted    Boolean       @default(false)
@@ -101,28 +102,35 @@ model ChannelConnection {
 }
 
 model User {
-  id         String   @id @default(uuid())
-  commerceId String
-  email      String   @unique
-  password   String
-  role       String   @default("OWNER") // OWNER, ADMIN, AGENT
-  commerce   Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  commerceId  String
+  email       String    @unique
+  password    String
+  role        String    @default("OWNER") // OWNER, ADMIN, AGENT, SUPERADMIN, SUPPORT
+  status      String    @default("ACTIVE") // ACTIVE, SUSPENDED, INACTIVE
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  commerce    Commerce  @relation(fields: [commerceId], references: [id], onDelete: Cascade)
 
   @@index([commerceId])
 }
 
 model AuditLog {
-  id          String   @id @default(uuid())
-  commerceId  String   
-  userId      String?  
-  action      String   
-  targetId    String   
-  details     String   @db.Text
-  createdAt   DateTime @default(now())
-  commerce    Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  commerceId     String   
+  userId         String?  
+  impersonatorId String?  
+  action         String   
+  targetId       String   
+  details        String   @db.Text
+  actorIp        String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  commerce       Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
 
   @@index([commerceId])
   @@index([userId])
+  @@index([impersonatorId])
 }
 
 model KnowledgeSource {

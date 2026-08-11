@@ -49,9 +49,9 @@ const ioredis_1 = __importDefault(require("ioredis"));
 const crypto_1 = __importDefault(require("crypto"));
 const textsplitters_1 = require("@langchain/textsplitters");
 const openai = new openai_1.default({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY || 'sk-fake-key-for-build-time',
 });
-const redis = new ioredis_1.default(process.env.REDIS_URL || 'redis://localhost:6379');
+const redis = new ioredis_1.default(process.env.REDIS_URL || 'redis://localhost:6379', { lazyConnect: true, enableOfflineQueue: false });
 async function createEmbedding(text) {
     const provider = process.env.LLM_PROVIDER || 'openai';
     // Caché de Embeddings con Redis (TTL 24h)

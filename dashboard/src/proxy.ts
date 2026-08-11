@@ -32,7 +32,7 @@ export async function proxy(request: NextRequest) {
 
       // Proteger las rutas de Backoffice (God Mode)
       if (pathname.startsWith('/backoffice')) {
-        if (payload.role !== 'SUPERADMIN') {
+        if (payload.isImpersonating || (payload.role !== 'SUPERADMIN' && payload.role !== 'SUPPORT')) {
           return NextResponse.redirect(new URL('/dashboard', request.url));
         }
       }

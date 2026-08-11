@@ -1,8 +1,8 @@
 export declare function getOrCreateSession(commerceId: string, customerIdentifier: string, channelConnectionId: string): Promise<{
     id: string;
+    status: string;
     createdAt: Date;
     commerceId: string;
-    status: string;
     channelConnectionId: string;
     customerIdentifier: string;
     isTest: boolean;

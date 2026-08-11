@@ -8,7 +8,7 @@ const openai_1 = __importDefault(require("openai"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const openai = new openai_1.default({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY || 'sk-fake-key-for-build-time',
 });
 const tools = [
     {
