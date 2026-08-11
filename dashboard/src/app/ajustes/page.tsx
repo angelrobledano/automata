@@ -220,15 +220,6 @@ export default function SettingsPage() {
             <Users className="w-4 h-4" />
             Cuenta y equipo
           </button>
-          <button 
-            onClick={() => setActiveTab('avanzado')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ml-auto ${
-              activeTab === 'avanzado' ? 'bg-slate-100 text-slate-900 shadow-xs' : 'text-slate-400 hover:text-slate-700'
-            }`}
-          >
-            <Sliders className="w-4 h-4" />
-            Avanzado
-          </button>
         </div>
 
         {/* PESTAÑA 1: MI NEGOCIO */}
@@ -595,37 +586,6 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* PESTAÑA 6: AVANZADO (PROMPT DEL SISTEMA Y PARÁMETROS TÉCNICOS DE IA) */}
-        {activeTab === 'avanzado' && (
-          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-6">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Configuración técnica avanzada de la IA</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Ajustes para desarrolladores, System Prompt y comportamiento base del modelo</p>
-            </div>
-
-            <form onSubmit={handleSaveGeneral} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">System Prompt (Instrucciones base)</label>
-                <textarea 
-                  name="systemPrompt"
-                  rows={6}
-                  defaultValue={settings?.general?.systemPrompt || ''}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-900 outline-none focus:ring-2 focus:ring-blue-600 font-mono"
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <button 
-                  type="submit"
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
-                >
-                  Guardar prompt técnico
-                </button>
-              </div>
-            </form>
           </div>
         )}
 
