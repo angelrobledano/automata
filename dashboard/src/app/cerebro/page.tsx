@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Copy, Check } from 'lucide-react';
+import { 
+  FileText, UploadCloud, Plus, Edit2, Trash2, CheckCircle2, AlertCircle, Sparkles, Send, Copy, Check, Eye, HelpCircle, Layers, ArrowRight, ShieldCheck
+} from 'lucide-react';
 import { analytics } from '@/lib/analytics';
 import { motion, AnimatePresence } from 'framer-motion';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 export default function CerebroPage() {
   const [activeTab, setActiveTab] = useState<'upload' | 'text'>('upload');
@@ -14,7 +14,6 @@ export default function CerebroPage() {
   // File upload state
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  
   const [uploadCategory, setUploadCategory] = useState('GENERAL');
   
   // Text thread state
@@ -38,6 +37,7 @@ export default function CerebroPage() {
   const [simMessages, setSimMessages] = useState<any[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [lastMetadata, setLastMetadata] = useState<any>(null);
+  const [showSimulatorModal, setShowSimulatorModal] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -181,397 +181,451 @@ export default function CerebroPage() {
     setTimeout(() => setCopiedChunkId(null), 2000);
   };
 
-  const clearSimulation = async () => {
-    try {
-      await fetch('/api/knowledge/simulate?commerceId=commerce-seed-id', { method: 'DELETE' });
-      setSimMessages([]);
-      setLastMetadata(null);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleSimulateMessage = async (e: any) => {
-    e.preventDefault();
+  const handleSimulate = async () => {
     if (!simMessage.trim() || isSimulating) return;
-
-    const currentMessage = simMessage;
+    const userMsg = simMessage;
     setSimMessage('');
-    setSimMessages(prev => [...prev, { role: 'user', content: currentMessage }]);
+    setSimMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setIsSimulating(true);
-    
-    // Add an empty assistant message to stream into
-    setSimMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
     try {
       const res = await fetch('/api/knowledge/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ commerceId: 'commerce-seed-id', message: currentMessage })
+        body: JSON.stringify({ message: userMsg, commerceId: 'commerce-seed-id' })
       });
-
-      if (!res.ok || !res.body) throw new Error('Error en la API');
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-      let assistantText = '';
-
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          
-          if (chunk.includes('[METADATA]')) {
-            const parts = chunk.split('[METADATA]');
-            assistantText += parts[0];
-            try {
-              const meta = JSON.parse(parts[1]);
-              setLastMetadata(meta.__metadata);
-            } catch(e) {}
-          } else {
-            assistantText += chunk;
-          }
-
-          setSimMessages(prev => {
-            const newArr = [...prev];
-            newArr[newArr.length - 1].content = assistantText;
-            return newArr;
-          });
-        }
+      const data = await res.json();
+      if (data.success) {
+        setSimMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+        if (data.metadata) setLastMetadata(data.metadata);
+      } else {
+        setSimMessages(prev => [...prev, { role: 'assistant', content: `⚠️ Error: ${data.error}` }]);
       }
-    } catch (err) {
-      console.error(err);
-      setSimMessages(prev => {
-        const newArr = [...prev];
-        newArr[newArr.length - 1].content = '⚠️ La IA está tardando demasiado en responder. Inténtalo de nuevo en unos segundos.';
-        return newArr;
-      });
+    } catch (e) {
+      setSimMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Error al comunicarse con la IA.' }]);
     } finally {
       setIsSimulating(false);
     }
   };
 
   return (
-    <div className="flex h-full font-sans overflow-hidden">
-      
-      {/* Columna Izquierda: Gestión de Fuentes */}
-      <div className="flex-1 overflow-y-auto p-8 bg-background/50 border-r border-border">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Cerebro del Asistente 🧠</h1>
-          <p className="text-sm text-muted-foreground">
-            Enseña a tu asistente cómo debe responder. Sube archivos o escribe hilos de conocimiento.
-          </p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex space-x-4 mb-6 border-b border-border">
+    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-16">
+      <div className="max-w-6xl mx-auto py-8 px-6 space-y-6">
+        
+        {/* HEADER PRINCIPAL */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Conocimiento</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Añade información para que tu asistente pueda responder mejor a tus clientes</p>
+          </div>
+          
           <button 
-            onClick={() => { setActiveTab('upload'); setEditingSourceId(null); setThreadTitle(''); setThreadContent(''); }}
-            className={`py-3 px-4 font-medium text-sm transition-colors ${activeTab === 'upload' ? 'border-b-2 border-gray-900 text-foreground' : 'text-muted-foreground hover:text-muted-foreground'}`}
+            onClick={() => setShowSimulatorModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer self-start sm:self-auto"
           >
-            📄 Subir Archivo
-          </button>
-          <button 
-            onClick={() => setActiveTab('text')}
-            className={`py-3 px-4 font-medium text-sm transition-colors ${activeTab === 'text' ? 'border-b-2 border-gray-900 text-foreground' : 'text-muted-foreground hover:text-muted-foreground'}`}
-          >
-            ✍️ Hilo de Conocimiento (Manual)
+            <Sparkles className="w-4 h-4" />
+            Probar asistente en vivo
           </button>
         </div>
 
-        {activeTab === 'upload' && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={`border-2 border-dashed rounded-lg p-10 text-center transition-all duration-200 flex flex-col items-center justify-center bg-card
-              ${isDragging ? 'border-indigo-500 bg-primary/10 scale-105 shadow-xl' : 'border-border hover:border-indigo-300 hover:bg-primary/10/30'}`}
-            onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          >
-            <motion.div 
-              animate={{ y: [0, -10, 0] }} 
-              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-              className="text-5xl mb-6 opacity-90 drop-shadow-none"
-            >
-              📄
-            </motion.div>
-            <h3 className="text-xl font-extrabold text-foreground mb-2">Sube tus archivos aquí</h3>
-            <p className="text-sm text-muted-foreground mb-8 font-medium">Soporta .PDF, .DOCX, .XLSX, .TXT y .MD</p>
-            
-            <div className="mb-8 w-72 text-left">
-              <label className="block text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Categoría del conocimiento</label>
-              <select 
-                value={uploadCategory}
-                onChange={(e) => setUploadCategory(e.target.value)}
-                className="w-full border-2 border-border rounded-lg px-4 py-3 text-sm font-medium focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 bg-card transition-all outline-none shadow-none cursor-pointer"
-              >
-                <option value="GENERAL">General</option>
-                <option value="POLICIES">Políticas y Envíos</option>
-                <option value="PRODUCTS">Productos / Catálogo</option>
-                <option value="QUICK_REPLIES">Respuestas Rápidas</option>
-              </select>
-            </div>
-
-            <motion.label 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="relative group bg-primary hover:bg-primary/90 text-white px-8 py-3.5 rounded-lg font-bold cursor-pointer transition-all shadow-none hover:shadow-indigo-500/30 text-sm overflow-hidden"
-            >
-              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-              <span className="relative z-10 flex items-center gap-2">Examinar archivos</span>
-              <input type="file" className="hidden" accept=".pdf,.docx,.xlsx,.txt,.md" onChange={handleFileSelect} />
-            </motion.label>
-          </motion.div>
+        {/* ALERTA DE ESTADO */}
+        {status && (
+          <div className="p-4 rounded-xl border text-xs font-semibold flex items-center justify-between bg-white border-slate-200 shadow-xs">
+            <span>{status}</span>
+            <button onClick={() => setStatus(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              ✕
+            </button>
+          </div>
         )}
 
-        {activeTab === 'text' && (
-          <div className="bg-card rounded-lg shadow-none border border-border p-6">
-            <h3 className="text-base font-bold text-foreground mb-4">{editingSourceId ? 'Editar Hilo' : 'Nuevo Hilo de Conocimiento'}</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Título del Hilo</label>
-                <input 
-                  type="text" 
-                  value={threadTitle}
-                  onChange={(e) => setThreadTitle(e.target.value)}
-                  placeholder="Ej. Horarios de Apertura"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-                />
+        {/* 4 BLOQUES COMERCIALES PRINCIPALES */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* BLOQUE 1: Información de tu negocio */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between space-y-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <span className="p-1 rounded-md bg-blue-50 text-blue-600">🏢</span>
+                  Información de tu negocio
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Configurado
+                </span>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Categoría</label>
+              <p className="text-xs text-slate-500">
+                Horarios, dirección, política de devoluciones y preguntas frecuentes.
+              </p>
+            </div>
+            <button 
+              onClick={() => { setActiveTab('text'); setThreadCategory('GENERAL'); }}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 self-start cursor-pointer"
+            >
+              Añadir información <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {/* BLOQUE 2: Productos y Servicios */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between space-y-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <span className="p-1 rounded-md bg-emerald-50 text-emerald-600">🛍️</span>
+                  Productos y servicios
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Actualizado
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Permite al asistente consultar tu catálogo y hacer recomendaciones.
+              </p>
+            </div>
+            <a 
+              href="/ajustes?tab=tienda"
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 self-start"
+            >
+              Gestionar productos <ArrowRight className="w-3 h-3" />
+            </a>
+          </div>
+
+          {/* BLOQUE 3: Documentos (PDFs) */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between space-y-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <span className="p-1 rounded-md bg-indigo-50 text-indigo-600">📄</span>
+                  Documentos (PDFs, Word, Excel)
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  {sources.filter(s => s.type === 'DOCUMENT').length} guardados
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Sube catálogos en PDF, manuales de uso o guías de precios.
+              </p>
+            </div>
+            <button 
+              onClick={() => setActiveTab('upload')}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 self-start cursor-pointer"
+            >
+              Subir documento <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {/* BLOQUE 4: Instrucciones del asistente */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between space-y-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <span className="p-1 rounded-md bg-violet-50 text-violet-600">⚙️</span>
+                  Instrucciones del asistente
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full border border-violet-200">
+                  Personalizado
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Define el tono de voz, saludo inicial y pautas de comportamiento.
+              </p>
+            </div>
+            <a 
+              href="/ajustes?tab=general"
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 self-start"
+            >
+              Ajustar tono e instrucciones <ArrowRight className="w-3 h-3" />
+            </a>
+          </div>
+
+        </div>
+
+        {/* EDITOR Y SUBIDA DE CONOCIMIENTO */}
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-5">
+          
+          {/* TABS DE ENTRADA DE DATOS */}
+          <div className="flex border-b border-slate-200 gap-4">
+            <button 
+              onClick={() => { setActiveTab('upload'); setEditingSourceId(null); }}
+              className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'upload' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <UploadCloud className="w-4 h-4" />
+              Subir documento (PDF, Word, Excel, TXT)
+            </button>
+            <button 
+              onClick={() => setActiveTab('text')}
+              className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'text' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              {editingSourceId ? 'Editar información' : 'Escribir texto libre o política'}
+            </button>
+          </div>
+
+          {/* TAB 1: SUBIDA DE DOCUMENTOS */}
+          {activeTab === 'upload' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <label className="text-xs font-semibold text-slate-700">Categoría:</label>
                 <select 
-                  value={threadCategory}
-                  onChange={(e) => setThreadCategory(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:border-transparent bg-card"
+                  value={uploadCategory}
+                  onChange={(e) => setUploadCategory(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-lg px-3 py-1.5 text-slate-900 outline-none"
                 >
-                  <option value="GENERAL">General</option>
-                  <option value="POLICIES">Políticas y Envíos</option>
-                  <option value="PRODUCTS">Productos / Catálogo</option>
-                  <option value="QUICK_REPLIES">Respuestas Rápidas</option>
+                  <option value="GENERAL">General / Negocio</option>
+                  <option value="POLICIES">Políticas / Devoluciones</option>
+                  <option value="PRODUCTS">Productos / Precios</option>
+                  <option value="FAQS">Preguntas frecuentes</option>
                 </select>
               </div>
+
+              <div 
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+                  isDragging ? 'border-blue-600 bg-blue-50/50' : 'border-slate-200 bg-slate-50/50 hover:border-slate-300'
+                }`}
+              >
+                <UploadCloud className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                <p className="text-xs font-bold text-slate-900 mb-1">Arrastra aquí tu documento o selecciónalo de tu ordenador</p>
+                <p className="text-[11px] text-slate-500 mb-4">Soporta PDF, Word (.docx), Excel (.xlsx) o Texto plano (.txt)</p>
+                
+                <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors shadow-xs">
+                  <span>Seleccionar archivo</span>
+                  <input type="file" onChange={handleFileSelect} accept=".pdf,.docx,.xlsx,.txt,.csv" className="hidden" />
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: TEXTO LIBRE O POLÍTICA */}
+          {activeTab === 'text' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Título de la información</label>
+                  <input 
+                    type="text"
+                    value={threadTitle}
+                    onChange={(e) => setThreadTitle(e.target.value)}
+                    placeholder="Ej: Horarios de atención y Festivos"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Categoría</label>
+                  <select 
+                    value={threadCategory}
+                    onChange={(e) => setThreadCategory(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-lg px-3 py-2 text-slate-900 outline-none"
+                  >
+                    <option value="GENERAL">General / Negocio</option>
+                    <option value="POLICIES">Políticas / Devoluciones</option>
+                    <option value="PRODUCTS">Productos / Precios</option>
+                    <option value="FAQS">Preguntas frecuentes</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Contenido</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Contenido explicativo</label>
                 <textarea 
                   value={threadContent}
                   onChange={(e) => setThreadContent(e.target.value)}
-                  placeholder="Ej. Abrimos de lunes a viernes de 10:00 a 20:00..."
-                  className="w-full h-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-y"
-                ></textarea>
+                  placeholder="Escribe la información detallada para que el asistente pueda memorizarla..."
+                  rows={5}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-900 outline-none focus:ring-2 focus:ring-blue-600 resize-y"
+                />
               </div>
-              <div className="flex justify-end gap-2">
+
+              <div className="flex gap-2 justify-end">
                 {editingSourceId && (
                   <button 
-                    onClick={() => { setEditingSourceId(null); setThreadTitle(''); setThreadContent(''); }}
-                    className="px-4 py-2 rounded-lg font-medium text-sm text-muted-foreground bg-card hover:bg-gray-200 transition-colors"
+                    onClick={() => { setEditingSourceId(null); setThreadTitle(''); setThreadContent(''); setThreadCategory('GENERAL'); }}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                   >
-                    Cancelar
+                    Cancelar edición
                   </button>
                 )}
                 <button 
                   onClick={saveTextThread}
                   disabled={isSavingText}
-                  className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg font-medium text-sm transition-colors shadow-none disabled:opacity-50"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
                 >
-                  {isSavingText ? 'Guardando...' : (editingSourceId ? 'Actualizar Hilo' : 'Guardar Hilo')}
+                  {isSavingText ? 'Guardando...' : editingSourceId ? 'Actualizar conocimiento' : 'Guardar en memoria de IA'}
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {status && (
-          <div className={`mt-4 p-3 rounded-lg text-sm font-medium transition-all ${isUploading || isSavingText ? 'bg-primary/10 text-indigo-800 border border-indigo-100' : status.includes('✅') ? 'bg-green-50 text-green-800 border border-green-100' : 'bg-red-50 text-red-800 border border-red-100'}`}>
-            {(isUploading || isSavingText) && <span className="inline-block w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>}
-            {status}
-          </div>
-        )}
-
-        <div className="mt-8">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Fuentes Sincronizadas ({sources.length})</h3>
-          <div className="bg-card border border-border rounded-lg overflow-hidden divide-y divide-gray-100">
-            {sources.length === 0 && (
-               <div className="p-6 text-center text-sm text-muted-foreground">Tu asistente está listo para aprender. Sube tu primer PDF o escribe unas normas básicas para empezar.</div>
-            )}
-            <AnimatePresence>
-              {sources.map(source => (
-                <motion.div 
-                  key={source.id} 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="p-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-0 hover:bg-primary/10/50 transition-colors"
-                >
-                  <div className="flex items-start gap-3 w-full lg:w-auto overflow-hidden">
-                    <span className="text-xl p-2 bg-card rounded-lg shadow-none border border-gray-100 flex-shrink-0 mt-0.5">{source.type === 'TEXT' ? '✍️' : '📄'}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <p className="font-bold text-sm text-foreground truncate" title={source.name}>{source.name}</p>
-                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-100 flex-shrink-0">
-                          {source.category === 'POLICIES' ? 'Políticas' : source.category === 'PRODUCTS' ? 'Productos' : source.category === 'QUICK_REPLIES' ? 'Resp. Rápidas' : 'General'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{new Date(source.createdAt).toLocaleDateString()} &middot; <span className="font-medium text-muted-foreground">{source._count?.chunks || 0} fragmentos</span></p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 w-full lg:w-auto justify-start lg:justify-end ml-12 lg:ml-0">
-                    <button onClick={() => auditSource(source)} className="text-primary bg-card border border-indigo-100 shadow-none text-xs font-bold hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-all hover:scale-105">Auditar</button>
-                    {source.type === 'TEXT' && (
-                      <button onClick={() => editSource(source)} className="text-primary bg-card border border-blue-100 shadow-none text-xs font-bold hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all hover:scale-105">Editar</button>
-                    )}
-                    <button onClick={() => deleteSource(source.id)} className="text-red-500 bg-card border border-red-100 shadow-none text-xs font-bold hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all hover:scale-105">Eliminar</button>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
         </div>
-        
-        {/* Modal de Auditoría */}
-        <Dialog open={!!auditingSource} onOpenChange={(open) => !open && setAuditingSource(null)}>
-          <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-            <DialogHeader className="p-4 border-b border-border bg-muted/50">
-              <DialogTitle>Auditoría de Conocimiento</DialogTitle>
-              <DialogDescription className="font-mono mt-1">
-                {auditingSource?.name}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="flex-1 overflow-y-auto p-6 bg-muted/30">
-              {isFetchingChunks ? (
-                <div className="flex flex-col items-center justify-center h-48">
-                  <span className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></span>
-                  <p className="text-sm text-muted-foreground">Recuperando fragmentos de memoria...</p>
-                </div>
-              ) : auditChunks.length === 0 ? (
-                <div className="text-center text-muted-foreground py-10">Aún no hemos terminado de procesar este documento. Vuelve a intentarlo en unos instantes.</div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-primary/10 text-primary text-xs p-3 rounded-lg border border-primary/20 mb-6">
-                    La IA ha troceado este documento en <strong>{auditChunks.length} fragmentos (chunks)</strong>. Así es exactamente como la IA "lee" y busca la información en tu base de datos antes de responder a un cliente.
-                  </div>
-                  {auditChunks.map((chunk, index) => (
-                    <div key={chunk.id} className="bg-background border border-border rounded-lg p-4 shadow-none relative group transition-all hover:border-indigo-200 hover:shadow-none">
-                      <span className="absolute -top-2.5 -left-2.5 bg-foreground text-background text-[10px] font-bold w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-background shadow-none">#{index + 1}</span>
-                      
-                      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                          {chunk.content.length} chars (~{Math.ceil(chunk.content.length / 4)} tokens)
-                        </span>
-                        <button 
-                          onClick={() => copyChunkToClipboard(chunk.id, chunk.content)}
-                          className="p-1.5 bg-card border border-border text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors shadow-none"
-                          title="Copiar texto del fragmento"
-                        >
-                          {copiedChunkId === chunk.id ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
 
-                      <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed font-mono mt-2 pr-12">{chunk.content}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+        {/* LISTADO DE FUENTES DE CONOCIMIENTO */}
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900">Conocimiento memorizado ({sources.length})</h3>
+            <span className="text-xs text-slate-500">Haz clic en un documento para editarlo o auditar su contenido</span>
+          </div>
+
+          {sources.length === 0 ? (
+            <div className="text-center py-10 bg-slate-50 border border-slate-100 rounded-lg p-6 space-y-2">
+              <Layers className="w-8 h-8 text-slate-300 mx-auto mb-1" />
+              <p className="text-xs font-bold text-slate-800">Todavía no has añadido información</p>
+              <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                Utiliza las pestañas superiores para subir un documento PDF o escribir información básica de tu empresa.
+              </p>
             </div>
-          </DialogContent>
-        </Dialog>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {sources.map((source) => (
+                <div 
+                  key={source.id} 
+                  className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex justify-between items-start space-x-3"
+                >
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{source.type === 'DOCUMENT' ? '📄' : '📝'}</span>
+                      <h4 className="text-xs font-bold text-slate-900 truncate">{source.name}</h4>
+                    </div>
+                    <p className="text-[11px] text-slate-500 line-clamp-2">
+                      {source.content}
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                        {source.category || 'GENERAL'}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {source._count?.chunks || 1} fragmentos
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button 
+                      onClick={() => auditSource(source)}
+                      title="Auditar fragmentos memorizados"
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    {source.type === 'TEXT' && (
+                      <button 
+                        onClick={() => editSource(source)}
+                        title="Editar hilo"
+                        className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => deleteSource(source.id)}
+                      title="Eliminar de la memoria"
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
       </div>
 
-      {/* Columna Derecha: Simulador Sandbox */}
-      <div className="w-[450px] flex-shrink-0 flex flex-col bg-card">
-        
-        {/* Cabecera Simulador */}
-        <div className="p-4 border-b border-border bg-background flex justify-between items-center">
-          <div>
-            <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span> Simulador en Vivo
-            </h2>
-            <p className="text-[10px] text-muted-foreground font-mono mt-1">Conectado a OpenAI real</p>
-          </div>
-          <button 
-            onClick={clearSimulation}
-            className="text-xs font-semibold text-muted-foreground hover:text-red-600 transition-colors px-2 py-1 bg-card border border-border rounded shadow-none"
-          >
-            Limpiar Chat
-          </button>
-        </div>
+      {/* MODAL SIMULADOR EN VIVO */}
+      <Dialog open={showSimulatorModal} onOpenChange={setShowSimulatorModal}>
+        <DialogContent className="bg-white border border-slate-200 rounded-xl p-6 shadow-lg max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-blue-600" />
+              Simulador del Asistente
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-1">
+              Prueba preguntas de tus clientes para comprobar exactamente cómo responde la IA con el conocimiento cargado.
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Panel Inspector (DevTools) */}
-        {lastMetadata && (
-          <div className="bg-gray-900 text-green-400 p-3 font-mono text-[10px] grid grid-cols-2 gap-2 border-b-4 border-indigo-500">
-            <div><span className="text-gray-400">Modelo:</span> {lastMetadata.model}</div>
-            <div><span className="text-gray-400">Latencia:</span> {lastMetadata.latencyMs}ms</div>
-            <div><span className="text-gray-400">Tokens:</span> {lastMetadata.tokensUsed} (P:{lastMetadata.promptTokens} C:{lastMetadata.completionTokens})</div>
-            <div><span className="text-gray-400">Coste:</span> ~${lastMetadata.estimatedCost?.toFixed(6)}</div>
-            <div className="col-span-2"><span className="text-gray-400">Fuentes inyectadas:</span> {lastMetadata.contextUsed} fragmentos</div>
-          </div>
-        )}
-
-        {/* Chat Area */}
-        <div ref={chatScrollRef} className="flex-1 p-4 overflow-y-auto space-y-4 bg-background">
-          <AnimatePresence>
-            {simMessages.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 space-y-3">
-                <div className="w-12 h-12 bg-card rounded-full flex items-center justify-center text-2xl">🤖</div>
-                <p className="text-sm">¡Pon a prueba a tu IA! Escríbele como si fueras un cliente para ver qué te responde.</p>
+          <div className="my-3 h-[280px] bg-slate-50 border border-slate-200 rounded-xl p-4 overflow-y-auto space-y-3" ref={chatScrollRef}>
+            {simMessages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-400 space-y-1">
+                <HelpCircle className="w-8 h-8 text-slate-300" />
+                <p className="text-xs font-semibold text-slate-700">Escribe una pregunta para probar a la IA</p>
+                <p className="text-[11px] text-slate-500">Ej: "¿Cuáles son vuestros horarios?" o "¿Aceptáis devoluciones?"</p>
               </div>
-            )}
-          </AnimatePresence>
-          <AnimatePresence>
-            {simMessages.map((msg, idx) => (
-              <motion.div 
-                key={idx} 
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`
-                  ${msg.role === 'user' ? 'bg-primary text-white rounded-tr-sm' : 'bg-card text-foreground border border-border shadow-none rounded-tl-sm'}
-                  rounded-lg px-4 py-2.5 max-w-[85%] text-sm
-                `}>
-                  {msg.role === 'user' ? (
-                    <p className="whitespace-pre-wrap leading-relaxed break-words">{msg.content}</p>
-                  ) : (
-                    <div className="prose prose-sm leading-relaxed max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-2 prose-strong:text-foreground text-foreground break-words">
-                      {msg.content ? (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                      ) : (
-                        <span className="flex items-center gap-1 h-5"><span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span><span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></span><span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></span></span>
-                      )}
-                    </div>
-                  )}
+            ) : simMessages.map((msg, idx) => (
+              <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs shadow-xs ${
+                  msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-xs' : 'bg-white border border-slate-200 text-slate-900 rounded-tl-xs'
+                }`}>
+                  {msg.content}
                 </div>
-              </motion.div>
+              </div>
             ))}
-          </AnimatePresence>
-        </div>
+          </div>
 
-        {/* Input Area */}
-        <div className="p-4 border-t border-border bg-card">
-          <form onSubmit={handleSimulateMessage} className="flex gap-2">
+          <div className="flex gap-2">
             <input 
-              type="text" 
+              type="text"
               value={simMessage}
-              onChange={e => setSimMessage(e.target.value)}
-              placeholder="Habla con tu bot..."
-              className="flex-1 bg-background border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-card transition-all"
+              onChange={(e) => setSimMessage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSimulate()}
+              placeholder="Haz una pregunta a tu asistente..."
+              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:ring-2 focus:ring-blue-600"
             />
             <button 
-              type="submit"
-              disabled={isSimulating || !simMessage.trim()}
-              className="bg-primary hover:bg-primary/90 disabled:bg-indigo-400 text-white p-2.5 rounded-lg transition-colors shadow-none"
+              onClick={handleSimulate}
+              disabled={!simMessage.trim() || isSimulating}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs disabled:opacity-50"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-              </svg>
+              Probar
             </button>
-          </form>
-        </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-      </div>
+      {/* MODAL DE AUDITORÍA DE FRAGMENTOS */}
+      <Dialog open={!!auditingSource} onOpenChange={() => setAuditingSource(null)}>
+        <DialogContent className="bg-white border border-slate-200 rounded-xl p-6 shadow-lg max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Eye className="w-5 h-5 text-blue-600" />
+              Fragmentos memorizados
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-1">
+              Visualiza los bloques exactos en los que la IA dividió "{auditingSource?.name}" para realizar la búsqueda vectorial.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="my-3 max-h-[300px] overflow-y-auto space-y-2">
+            {isFetchingChunks ? (
+              <div className="p-8 text-center text-xs text-slate-500">Cargando fragmentos...</div>
+            ) : auditChunks.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-500">No hay fragmentos procesados aún.</div>
+            ) : auditChunks.map((chunk, idx) => (
+              <div key={chunk.id} className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
+                <div className="flex justify-between items-center text-[10px] text-slate-400">
+                  <span>Fragmento #{idx + 1}</span>
+                  <button 
+                    onClick={() => copyChunkToClipboard(chunk.id, chunk.content)}
+                    className="text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1 font-semibold"
+                  >
+                    {copiedChunkId === chunk.id ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    {copiedChunkId === chunk.id ? 'Copiado' : 'Copiar'}
+                  </button>
+                </div>
+                <p className="text-slate-800 leading-relaxed font-mono text-[11px]">{chunk.content}</p>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
