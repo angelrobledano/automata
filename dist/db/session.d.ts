@@ -1,8 +1,8 @@
 export declare function getOrCreateSession(commerceId: string, customerIdentifier: string, channelConnectionId: string): Promise<{
     id: string;
+    commerceId: string;
     status: string;
     createdAt: Date;
-    commerceId: string;
     channelConnectionId: string;
     customerIdentifier: string;
     isTest: boolean;
@@ -10,22 +10,22 @@ export declare function getOrCreateSession(commerceId: string, customerIdentifie
     updatedAt: Date;
 }>;
 export declare function getSessionMessages(sessionId: string): Promise<{
-    type: string;
     id: string;
-    createdAt: Date;
     role: string;
+    createdAt: Date;
     sessionId: string;
+    type: string;
     content: string;
     tokensUsed: number | null;
     estimatedCost: number | null;
     latencyMs: number | null;
 }[]>;
 export declare function addMessageToSession(sessionId: string, role: 'user' | 'assistant' | 'system', content: string): Promise<{
-    type: string;
     id: string;
-    createdAt: Date;
     role: string;
+    createdAt: Date;
     sessionId: string;
+    type: string;
     content: string;
     tokensUsed: number | null;
     estimatedCost: number | null;

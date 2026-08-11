@@ -1,9 +1,9 @@
 export declare function getMetaLoginUrl(commerceId: string): string;
 export declare function exchangeCodeForTokens(code: string, commerceId: string, userId: string, ip: string): Promise<{
     id: string;
+    commerceId: string;
     status: import(".prisma/client").$Enums.ConnectionStatus;
     createdAt: Date;
-    commerceId: string;
     provider: import(".prisma/client").$Enums.ChannelProvider;
     accessToken: string | null;
     refreshToken: string | null;

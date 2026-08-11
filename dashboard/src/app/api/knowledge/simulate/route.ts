@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { prisma } from '../../../../../../src/db/prisma';
 import { searchSimilarChunks } from '../../../../../../src/rag/index';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-fake-key-for-build-time',
-});
+import { resolveApplicableFacts } from '../../../../../../src/rag/knowledge-resolver';
+import { generateValidatedResponse } from '../../../../../../src/rag/quality-layer';
 
 import { verifyToken } from '@/lib/jwt';
 import { cookies } from 'next/headers';
@@ -45,7 +42,6 @@ export async function POST(req: Request) {
     });
 
     if (!session) {
-      // Find or create a WEBCHAT channel connection for the simulator
       let webConnection = await prisma.channelConnection.findFirst({
         where: { commerceId, provider: 'WEBCHAT' }
       });
@@ -72,7 +68,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. Guardar el mensaje del usuario
+    // 3. Guardar mensaje del usuario
     await prisma.message.create({
       data: {
         sessionId: session.id,
@@ -81,101 +77,55 @@ export async function POST(req: Request) {
       }
     });
 
-    // 4. RAG: Buscar contexto relevante en la base de datos de conocimiento
+    // 4. KNOWLEDGE DATA LAYER: Resolución determinista de hechos vigentes
+    const resolvedFacts = await resolveApplicableFacts(commerceId, message);
+
+    // 5. HYBRID RAG: Búsqueda de documentos contextuales
     const relevantChunks = await searchSimilarChunks(commerceId, message, 3);
-    const contextStr = relevantChunks.map(c => `[Fuente: ${c.sourcename || 'Desconocida'}]\n${c.content}`).join('\n\n');
 
-    // 5. Construir el Prompt
-    const systemMessage = `
-${commerce.systemPrompt}
-
-INFORMACIÓN DE CONTEXTO (Usa esta información para responder):
-${contextStr || 'No hay información adicional disponible.'}
-
-REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NINGÚN CONCEPTO debes responder a preguntas de cultura general, matemáticas, programación, historia, curiosidades u otros temas que no estén estrictamente relacionados con los productos, horarios, o servicios de la tienda. Si el usuario hace una pregunta fuera de esta temática, o si la información no está en el contexto, responde amablemente diciendo que solo puedes ayudar con temas relacionados con la tienda y sus productos, y no inventes datos.
-    `.trim();
-
-    const openaiMessages = [
-      { role: 'system', content: systemMessage },
-      ...session.messages.map(m => ({ role: m.role, content: m.content })),
-      { role: 'user', content: message }
-    ] as any[];
-
-    // 6. Llamar a OpenAI con Streaming y trackeo de uso
-    const response = await openai.chat.completions.create({
-      model: commerce.aiModel || 'gpt-4o-mini',
-      messages: openaiMessages,
-      temperature: commerce.aiTemperature || 0.7,
-      max_tokens: commerce.aiMaxTokens || 500,
-      stream: true,
-      stream_options: { include_usage: true }
+    // 6. RESPONSE GENERATION & QUALITY LAYER
+    const messageHistory = session.messages.map(m => ({ role: m.role, content: m.content }));
+    const finalReply = await generateValidatedResponse({
+      commerceId,
+      sessionId: session.id,
+      userQuestion: message,
+      systemPrompt: commerce.systemPrompt ?? '',
+      messageHistory,
+      resolvedFacts,
+      ragChunks: relevantChunks,
+      aiModel: commerce.aiModel || 'gpt-4o-mini',
+      temperature: commerce.aiTemperature || 0.2
     });
 
-    // 7. Configurar el stream para el cliente
-    const encoder = new TextEncoder();
-    let fullContent = '';
-    let usage: any = null;
+    const latencyMs = Date.now() - startTime;
+    const tokensUsed = Math.round(finalReply.length * 1.3);
+    const estimatedCost = tokensUsed * 0.0000003;
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of response) {
-            const content = chunk.choices[0]?.delta?.content || '';
-            if (content) {
-              fullContent += content;
-              controller.enqueue(encoder.encode(content));
-            }
-            if (chunk.usage) {
-              usage = chunk.usage;
-            }
-          }
-          
-          // Al terminar el stream, guardar el mensaje y métricas en BD asíncronamente
-          const latencyMs = Date.now() - startTime;
-          const tokensUsed = usage?.total_tokens || 0;
-          
-          // Estimación burda de coste (ej. gpt-4o-mini: $0.15/1M input, $0.60/1M output)
-          // Se simplifica calculando un coste aproximado total
-          const costPerToken = commerce.aiModel.includes('mini') ? 0.0000003 : 0.00001; 
-          const estimatedCost = tokensUsed * costPerToken;
-
-          await prisma.message.create({
-            data: {
-              sessionId: session!.id,
-              role: 'assistant',
-              content: fullContent,
-              tokensUsed,
-              latencyMs,
-              estimatedCost
-            }
-          });
-
-          // Enviar los metadatos finales al cliente en un formato especial al final del stream
-          const metadata = JSON.stringify({
-            __metadata: {
-              latencyMs,
-              tokensUsed,
-              estimatedCost,
-              promptTokens: usage?.prompt_tokens,
-              completionTokens: usage?.completion_tokens,
-              model: commerce.aiModel,
-              contextUsed: relevantChunks.length
-            }
-          });
-          controller.enqueue(encoder.encode(`\n\n[METADATA]${metadata}`));
-
-          controller.close();
-        } catch (e) {
-          controller.error(e);
-        }
+    // 7. Guardar el mensaje devuelto en sesión
+    await prisma.message.create({
+      data: {
+        sessionId: session.id,
+        role: 'assistant',
+        content: finalReply,
+        tokensUsed,
+        latencyMs,
+        estimatedCost
       }
     });
 
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Transfer-Encoding': 'chunked',
-      },
+    return NextResponse.json({
+      success: true,
+      reply: finalReply,
+      metadata: {
+        latencyMs,
+        tokensUsed,
+        estimatedCost,
+        model: commerce.aiModel,
+        resolvedIntent: resolvedFacts.intent,
+        activeRule: resolvedFacts.activeRules[0]?.name || 'Ninguna',
+        overriddenRules: resolvedFacts.overriddenRuleNames,
+        isClosed: resolvedFacts.isClosed
+      }
     });
 
   } catch (error: any) {
@@ -185,7 +135,6 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
 }
 
 export async function DELETE(req: Request) {
-  // Limpiar sesión de prueba
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;

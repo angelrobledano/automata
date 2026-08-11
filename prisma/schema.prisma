@@ -63,6 +63,74 @@ model Commerce {
   subscriptions    Subscription[]
   consumptions     Consumption[]
   invoices         Invoice[]
+  structuredRules  StructuredKnowledgeRule[]
+  responseAuditLogs ResponseAuditLog[]
+}
+
+enum RuleType {
+  BUSINESS_HOURS
+  PRICING
+  PROMOTION
+  HOLIDAY_CLOSURE
+  POLICY
+  LOCATION
+  PAYMENT_METHOD
+  GENERAL_FACT
+}
+
+enum RuleScope {
+  COMPANY
+  LOCATION
+  PRODUCT
+  SERVICE
+}
+
+model StructuredKnowledgeRule {
+  id           String    @id @default(uuid())
+  commerceId   String
+  type         RuleType
+  name         String    // Ej: "Horario habitual", "Horario de verano", "Festivo 15 de Agosto"
+  scope        RuleScope @default(COMPANY)
+  priority     Int       @default(100) // 500=Festivo/Fecha especifica, 300=Temporada/Verano, 100=Habitual
+  
+  validFrom    DateTime? // Inicio de vigencia
+  validUntil   DateTime? // Fin de vigencia
+  daysOfWeek   Int[]     // [1,2,3,4,5] (1=Lunes, 7=Domingo)
+  monthsOfYear Int[]     // [6,7,8,9] (Junio a Septiembre)
+  specificDate DateTime? // Para fechas concretas (ej. 2026-08-15)
+
+  isOverride   Boolean   @default(false) // Si true, anula reglas de menor prioridad en su ventana
+  isClosed     Boolean   @default(false) // Para cierres / festivos
+  payload      Json      // Datos estructurados (franjas horarias, notas)
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  commerce     Commerce  @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+
+  @@index([commerceId, type])
+  @@index([validFrom, validUntil])
+}
+
+model ResponseAuditLog {
+  id                   String   @id @default(uuid())
+  commerceId           String
+  sessionId            String?
+  userQuestion         String   @db.Text
+  detectedIntent       String?
+  selectedRules        Json?    // Reglas estructuradas vigentes seleccionadas
+  resolvedFacts        Json?    // Hechos deterministas resueltos
+  ragChunksUsed        Json?    
+  generatedResponse    String   @db.Text
+  qualityPassed        Boolean  @default(true)
+  qualityFailures      String[] // ["CONTRADICTION_DETECTED", "OUTDATED_RULE_MIX"]
+  regenerationCount    Int      @default(0)
+  finalResponse        String   @db.Text
+  createdAt            DateTime @default(now())
+
+  commerce             Commerce @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+
+  @@index([commerceId])
 }
 
 model ChannelConnection {

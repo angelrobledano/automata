@@ -1,10 +1,10 @@
 export declare function getInboxSessions(commerceId: string): Promise<({
     messages: {
-        type: string;
         id: string;
-        createdAt: Date;
         role: string;
+        createdAt: Date;
         sessionId: string;
+        type: string;
         content: string;
         tokensUsed: number | null;
         estimatedCost: number | null;
@@ -12,9 +12,9 @@ export declare function getInboxSessions(commerceId: string): Promise<({
     }[];
 } & {
     id: string;
+    commerceId: string;
     status: string;
     createdAt: Date;
-    commerceId: string;
     channelConnectionId: string;
     customerIdentifier: string;
     isTest: boolean;
@@ -23,9 +23,9 @@ export declare function getInboxSessions(commerceId: string): Promise<({
 })[]>;
 export declare function requestHuman(sessionId: string): Promise<{
     id: string;
+    commerceId: string;
     status: string;
     createdAt: Date;
-    commerceId: string;
     channelConnectionId: string;
     customerIdentifier: string;
     isTest: boolean;

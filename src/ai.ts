@@ -1,7 +1,9 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import { Commerce } from '@prisma/client';
-import { createWooCommerceOrder } from './integrations/woocommerce';
+import { resolveApplicableFacts } from './rag/knowledge-resolver';
+import { generateValidatedResponse } from './rag/quality-layer';
+import { searchSimilarChunks } from './rag/index';
 
 dotenv.config();
 
@@ -9,63 +11,37 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'sk-fake-key-for-build-time',
 });
 
-const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
-  {
-    type: 'function',
-    function: {
-      name: 'confirm_and_create_order',
-      description: 'Llamar a esta función SOLO cuando el cliente final haya aceptado el resumen del pedido y tengas todos los datos necesarios.',
-      parameters: {
-        type: 'object',
-        properties: {
-          customer_name: { type: 'string', description: 'Nombre del cliente' },
-          items: { type: 'array', items: { type: 'string' }, description: 'Lista de artículos pedidos con sus cantidades' },
-          pickup_time: { type: 'string', description: 'Fecha y hora acordada para la recogida o entrega' },
-          notes: { type: 'string', description: 'Cualquier nota adicional, alergia o personalización' },
-        },
-        required: ['customer_name', 'items', 'pickup_time'],
-      },
-    },
-  },
-];
-
 export async function generateAIResponse(
   commerce: Commerce, 
   customerPhone: string,
-  messageHistory: { role: 'user' | 'assistant' | 'system', content: string | null }[]
+  messageHistory: { role: 'user' | 'assistant' | 'system', content: string | null }[],
+  sessionId?: string
 ) {
-  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: 'system', content: commerce.systemPrompt ?? '' },
-    ...messageHistory as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-  ];
+  const lastUserMsg = [...messageHistory].reverse().find(m => m.role === 'user')?.content || '';
 
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: messages,
-      tools: tools,
-      tool_choice: 'auto',
-      temperature: 0.2,
+    // 1. Knowledge Data Layer: Determinación determinista de hechos vigentes
+    const resolvedFacts = await resolveApplicableFacts(commerce.id, lastUserMsg);
+
+    // 2. Hybrid RAG (recuperación de documentos)
+    const ragChunks = await searchSimilarChunks(commerce.id, lastUserMsg, 3);
+
+    // 3. Response Generation + Response Quality Layer + Auditoría
+    const validatedResponse = await generateValidatedResponse({
+      commerceId: commerce.id,
+      sessionId: sessionId ?? null,
+      userQuestion: lastUserMsg,
+      systemPrompt: commerce.systemPrompt ?? '',
+      messageHistory: messageHistory.map(m => ({ role: m.role, content: m.content || '' })),
+      resolvedFacts,
+      ragChunks,
+      aiModel: commerce.aiModel || 'gpt-4o-mini',
+      temperature: commerce.aiTemperature || 0.2
     });
 
-    const responseMessage = response.choices[0]?.message;
-    if (!responseMessage) throw new Error('No response from OpenAI');
-
-    // Eliminar la invocación a WooCommerce por ahora, ya que refactorizamos Commerce
-    // En el futuro, recuperaremos esta configuración de un modelo de Integraciones de E-Commerce.
-    if (responseMessage.tool_calls) {
-      for (const toolCall of responseMessage.tool_calls) {
-        if (toolCall.type === 'function' && toolCall.function.name === 'confirm_and_create_order') {
-          const args = JSON.parse(toolCall.function.arguments);
-          console.log(`[AI] LLamada a función detectada: confirm_and_create_order`, args);
-          return `¡Perfecto! He recibido tu pedido. Próximamente habilitaremos la pasarela de pedidos. ¡Gracias!`;
-        }
-      }
-    }
-
-    return responseMessage.content ?? '';
+    return validatedResponse;
   } catch (error) {
-    console.error('[OpenAI] Error generando respuesta:', error);
+    console.error('[OpenAI] Error generando respuesta validada:', error);
     throw error;
   }
 }

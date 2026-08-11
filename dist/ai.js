@@ -6,60 +6,36 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateAIResponse = generateAIResponse;
 const openai_1 = __importDefault(require("openai"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const knowledge_resolver_1 = require("./rag/knowledge-resolver");
+const quality_layer_1 = require("./rag/quality-layer");
+const index_1 = require("./rag/index");
 dotenv_1.default.config();
 const openai = new openai_1.default({
     apiKey: process.env.OPENAI_API_KEY || 'sk-fake-key-for-build-time',
 });
-const tools = [
-    {
-        type: 'function',
-        function: {
-            name: 'confirm_and_create_order',
-            description: 'Llamar a esta función SOLO cuando el cliente final haya aceptado el resumen del pedido y tengas todos los datos necesarios.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    customer_name: { type: 'string', description: 'Nombre del cliente' },
-                    items: { type: 'array', items: { type: 'string' }, description: 'Lista de artículos pedidos con sus cantidades' },
-                    pickup_time: { type: 'string', description: 'Fecha y hora acordada para la recogida o entrega' },
-                    notes: { type: 'string', description: 'Cualquier nota adicional, alergia o personalización' },
-                },
-                required: ['customer_name', 'items', 'pickup_time'],
-            },
-        },
-    },
-];
-async function generateAIResponse(commerce, customerPhone, messageHistory) {
-    const messages = [
-        { role: 'system', content: commerce.systemPrompt ?? '' },
-        ...messageHistory,
-    ];
+async function generateAIResponse(commerce, customerPhone, messageHistory, sessionId) {
+    const lastUserMsg = [...messageHistory].reverse().find(m => m.role === 'user')?.content || '';
     try {
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: messages,
-            tools: tools,
-            tool_choice: 'auto',
-            temperature: 0.2,
+        // 1. Knowledge Data Layer: Determinación determinista de hechos vigentes
+        const resolvedFacts = await (0, knowledge_resolver_1.resolveApplicableFacts)(commerce.id, lastUserMsg);
+        // 2. Hybrid RAG (recuperación de documentos)
+        const ragChunks = await (0, index_1.searchSimilarChunks)(commerce.id, lastUserMsg, 3);
+        // 3. Response Generation + Response Quality Layer + Auditoría
+        const validatedResponse = await (0, quality_layer_1.generateValidatedResponse)({
+            commerceId: commerce.id,
+            sessionId: sessionId ?? null,
+            userQuestion: lastUserMsg,
+            systemPrompt: commerce.systemPrompt ?? '',
+            messageHistory: messageHistory.map(m => ({ role: m.role, content: m.content || '' })),
+            resolvedFacts,
+            ragChunks,
+            aiModel: commerce.aiModel || 'gpt-4o-mini',
+            temperature: commerce.aiTemperature || 0.2
         });
-        const responseMessage = response.choices[0]?.message;
-        if (!responseMessage)
-            throw new Error('No response from OpenAI');
-        // Eliminar la invocación a WooCommerce por ahora, ya que refactorizamos Commerce
-        // En el futuro, recuperaremos esta configuración de un modelo de Integraciones de E-Commerce.
-        if (responseMessage.tool_calls) {
-            for (const toolCall of responseMessage.tool_calls) {
-                if (toolCall.type === 'function' && toolCall.function.name === 'confirm_and_create_order') {
-                    const args = JSON.parse(toolCall.function.arguments);
-                    console.log(`[AI] LLamada a función detectada: confirm_and_create_order`, args);
-                    return `¡Perfecto! He recibido tu pedido. Próximamente habilitaremos la pasarela de pedidos. ¡Gracias!`;
-                }
-            }
-        }
-        return responseMessage.content ?? '';
+        return validatedResponse;
     }
     catch (error) {
-        console.error('[OpenAI] Error generando respuesta:', error);
+        console.error('[OpenAI] Error generando respuesta validada:', error);
         throw error;
     }
 }
