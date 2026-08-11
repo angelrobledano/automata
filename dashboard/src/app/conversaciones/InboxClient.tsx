@@ -270,8 +270,8 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
         )}
       </div>
 
-      {/* NUEVA BARRA CONSOLIDADA DE ESTADO DE CONEXIONES (BG-ZINC-100 CON TAGS DE ERRORES/DISMISSIBLE) */}
-      <ConsolidatedStatusBar whatsappDisconnected={true} woocommerceIssue={true} />
+      {/* NUEVA BARRA CONSOLIDADA DE ESTADO DE CONEXIONES (Sincronizada con la DB) */}
+      <ConsolidatedStatusBar />
 
       {/* CONTENEDOR PRINCIPAL CHAT */}
       <div className="flex-1 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-row min-h-0">

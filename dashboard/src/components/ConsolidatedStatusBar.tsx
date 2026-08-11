@@ -1,18 +1,35 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, X, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, X, ShieldAlert, CheckCircle2 } from 'lucide-react';
 
 export function ConsolidatedStatusBar({
-  whatsappDisconnected = true,
-  woocommerceIssue = true,
+  whatsappDisconnected,
+  woocommerceIssue,
 }: {
   whatsappDisconnected?: boolean;
   woocommerceIssue?: boolean;
 }) {
-  const [showWhatsappTag, setShowWhatsappTag] = useState(whatsappDisconnected);
-  const [showWooTag, setShowWooTag] = useState(woocommerceIssue);
+  const [isWaConnected, setIsWaConnected] = useState<boolean>(true);
+  const [isWooConnected, setIsWooConnected] = useState<boolean>(false);
+  const [dismissedWa, setDismissedWa] = useState(false);
+  const [dismissedWoo, setDismissedWoo] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.settings?.channels) {
+          setIsWaConnected(!!data.settings.channels.metaConnected);
+          setIsWooConnected(!!data.settings.store?.wooConnected);
+        }
+      })
+      .catch(err => console.error('Error fetching settings status:', err));
+  }, []);
+
+  const showWhatsappTag = !isWaConnected && !dismissedWa;
+  const showWooTag = !isWooConnected && !dismissedWoo;
 
   if (!showWhatsappTag && !showWooTag) return null;
 
@@ -24,7 +41,7 @@ export function ConsolidatedStatusBar({
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
-        {/* TAG 1: WHATSAPP DESCONECTADO */}
+        {/* TAG 1: WHATSAPP DESCONECTADO (SOLO SI REALMENTE NO ESTÁ CONECTADO) */}
         {showWhatsappTag && (
           <div className="inline-flex items-center gap-1.5 bg-zinc-200/80 border border-zinc-300/70 text-[#8B0000] font-bold px-2.5 py-0.5 rounded-full text-[11px] transition-all hover:bg-zinc-200">
             <span className="w-2 h-2 rounded-full bg-red-600 shrink-0"></span>
@@ -34,7 +51,7 @@ export function ConsolidatedStatusBar({
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                setShowWhatsappTag(false);
+                setDismissedWa(true);
               }}
               title="Descartar aviso"
               className="text-zinc-500 hover:text-zinc-800 cursor-pointer ml-0.5"
@@ -54,7 +71,7 @@ export function ConsolidatedStatusBar({
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                setShowWooTag(false);
+                setDismissedWoo(true);
               }}
               title="Descartar aviso"
               className="text-zinc-500 hover:text-zinc-800 cursor-pointer ml-0.5"
