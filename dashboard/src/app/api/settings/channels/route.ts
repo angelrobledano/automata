@@ -13,6 +13,10 @@ export async function PATCH(request: Request) {
     const payload = await verifyToken(token);
     if (!payload) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
+    if (payload.role === 'AGENT') {
+      return NextResponse.json({ error: 'No tienes permisos para modificar la configuración' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { waPhoneNumberId, waToken, wooUrl, wooConsumerKey, wooConsumerSecret } = body;
 
@@ -63,6 +67,10 @@ export async function DELETE(request: Request) {
 
     const payload = await verifyToken(token);
     if (!payload) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+    if (payload.role === 'AGENT') {
+      return NextResponse.json({ error: 'No tienes permisos para modificar la configuración' }, { status: 403 });
+    }
 
     const commerceId = payload.commerceId as string;
     const url = new URL(request.url);

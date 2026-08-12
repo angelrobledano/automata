@@ -13,14 +13,12 @@ export async function GET(request: Request) {
 
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    let commerceId = 'commerce-seed-id';
+    if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
-    if (token) {
-      const payload = await verifyToken(token);
-      if (payload && payload.commerceId) {
-        commerceId = payload.commerceId as string;
-      }
-    }
+    const payload = await verifyToken(token);
+    if (!payload || !payload.commerceId) return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
+
+    const commerceId = payload.commerceId as string;
 
     const commerce = await prisma.commerce.findUnique({
       where: { id: commerceId },

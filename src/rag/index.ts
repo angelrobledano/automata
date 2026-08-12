@@ -327,3 +327,21 @@ export async function purgeSemanticCache(commerceId: string): Promise<void> {
   `;
 }
 
+/**
+ * Garantiza la existencia de índices HNSW vectoriales en PostgreSQL para búsquedas de alta velocidad a escala
+ */
+export async function ensureVectorIndexes(): Promise<void> {
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS document_chunk_embedding_hnsw_idx 
+      ON "DocumentChunk" USING hnsw (embedding vector_cosine_ops);
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS semantic_cache_embedding_hnsw_idx 
+      ON "SemanticCache" USING hnsw (embedding vector_cosine_ops);
+    `);
+  } catch (err) {
+    console.warn('[RAG] Verificación de índices vectoriales HNSW finalizada (o no soportada):', err);
+  }
+}
+

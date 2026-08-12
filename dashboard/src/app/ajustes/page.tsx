@@ -676,19 +676,56 @@ export default function SettingsPage() {
           <DialogContent className="max-w-md bg-white p-6 rounded-2xl border border-slate-200">
             <DialogHeader>
               <DialogTitle className="text-base font-bold text-slate-900">Conectar tienda WooCommerce</DialogTitle>
-              <DialogDescription className="text-xs text-slate-500">Introduce la URL y credenciales de API de tu tienda WooCommerce.</DialogDescription>
+              <DialogDescription className="text-xs text-slate-500">Introduce la URL y las claves API de tu tienda WooCommerce para sincronización.</DialogDescription>
             </DialogHeader>
 
-            <div className="mt-4 space-y-3">
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const wooUrl = formData.get('wooUrl') as string;
+              const wooConsumerKey = formData.get('wooConsumerKey') as string;
+              const wooConsumerSecret = formData.get('wooConsumerSecret') as string;
+
+              if (!wooUrl || !wooConsumerKey || !wooConsumerSecret) {
+                showToast('Por favor completa todos los campos de WooCommerce');
+                return;
+              }
+
+              try {
+                const res = await fetch('/api/onboarding/woo', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ wooUrl, wooConsumerKey, wooConsumerSecret })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                  showToast('Tienda WooCommerce conectada correctamente');
+                  setShowWooModal(false);
+                } else {
+                  showToast(data.error || 'Error conectando la tienda');
+                }
+              } catch (err) {
+                showToast('Error de conexión con la tienda');
+              }
+            }} className="mt-4 space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">URL de la tienda (HTTPS)</label>
-                <input type="text" placeholder="https://mitienda.com" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none" />
+                <input name="wooUrl" type="url" placeholder="https://mitienda.com" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Consumer Key (ck_...)</label>
+                <input name="wooConsumerKey" type="text" placeholder="ck_xxxxxxxxxxxxxxxx" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Consumer Secret (cs_...)</label>
+                <input name="wooConsumerSecret" type="password" placeholder="cs_xxxxxxxxxxxxxxxx" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" />
               </div>
               <div className="flex gap-2 justify-end pt-2">
-                <button onClick={() => setShowWooModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl">Cancelar</button>
-                <button onClick={() => { showToast('Tienda WooCommerce conectada'); setShowWooModal(false); }} className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl">Guardar</button>
+                <button type="button" onClick={() => setShowWooModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs">Conectar WooCommerce</button>
               </div>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       )}

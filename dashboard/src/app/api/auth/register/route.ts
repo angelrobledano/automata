@@ -12,6 +12,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Faltan campos' }, { status: 400 });
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: 'El formato de correo electrónico no es válido' }, { status: 400 });
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 });
+    }
+
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return NextResponse.json({ error: 'El email ya está en uso' }, { status: 400 });

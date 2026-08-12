@@ -2,11 +2,26 @@ import axios from 'axios';
 import { FormattedMessage } from '../formatters/channel-formatter';
 import { buildWhatsAppPayload, buildWhatsAppTextPayload } from '../formatters/whatsapp-formatter';
 
+// Simple in-memory rate limiter per phone number (máx 50 msgs / sec)
+const lastSendTimestamps: Record<string, number> = {};
+const MIN_SEND_INTERVAL_MS = 20; // 20ms = 50 req/sec max
+
+async function throttleOutgoing(phoneNumberId: string): Promise<void> {
+  const now = Date.now();
+  const lastSend = lastSendTimestamps[phoneNumberId] || 0;
+  const elapsed = now - lastSend;
+  if (elapsed < MIN_SEND_INTERVAL_MS) {
+    await new Promise(res => setTimeout(res, MIN_SEND_INTERVAL_MS - elapsed));
+  }
+  lastSendTimestamps[phoneNumberId] = Date.now();
+}
+
 /**
  * Envía un mensaje de texto simple vía WhatsApp Business API
  */
 export async function sendWhatsAppMessage(phoneNumberId: string, token: string, to: string, text: string) {
   try {
+    await throttleOutgoing(phoneNumberId);
     const url = `https://graph.facebook.com/v17.0/${phoneNumberId}/messages`;
     const payload = buildWhatsAppTextPayload(to, text);
 
@@ -29,6 +44,7 @@ export async function sendWhatsAppMessage(phoneNumberId: string, token: string, 
  */
 export async function sendWhatsAppFormattedMessage(phoneNumberId: string, token: string, to: string, formatted: FormattedMessage) {
   try {
+    await throttleOutgoing(phoneNumberId);
     const url = `https://graph.facebook.com/v17.0/${phoneNumberId}/messages`;
     const payload = buildWhatsAppPayload(to, formatted);
 

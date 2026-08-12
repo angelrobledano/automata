@@ -48,6 +48,24 @@ export function validateResponseQuality(
     }
   }
 
+  // 3. VALIDACIÓN DE PRECIOS Y HECHOS ESTRUCTURADOS (PRICE_CONTRADICTION & CLAIM_CONSISTENCY)
+  if (resolvedFacts.resolvedFactsText) {
+    const factsTextLower = resolvedFacts.resolvedFactsText.toLowerCase();
+    // Extraer valores numéricos de precio en los hechos resueltos (ej. 2,50€, 15€, etc.)
+    const factPrices = factsTextLower.match(/\d+[.,]?\d*\s*€/g) || [];
+    const responsePrices = resLower.match(/\d+[.,]?\d*\s*€/g) || [];
+
+    // Si la respuesta menciona precios que no están en los hechos ni en las reglas ni en RAG, verificar discrepancias directas
+    if (factPrices.length > 0 && responsePrices.length > 0) {
+      const isPriceSupported = responsePrices.some(rp => 
+        factPrices.some(fp => fp.replace(/\s/g, '') === rp.replace(/\s/g, ''))
+      );
+      if (!isPriceSupported && !resolvedFacts.intent?.includes('GENERAL')) {
+        failures.push('UNSUPPORTED_PRICE_CLAIM');
+      }
+    }
+  }
+
   let feedback = '';
   if (failures.includes('CONTRADICTION_DETECTED')) {
     feedback += ' Has mezclado el horario habitual (20:00) con el horario de verano (19:30-21:30). El horario habitual está totalmente anulado por el de verano. NUNCA menciones 20:00 cuando el horario de verano esté activo.';
@@ -57,6 +75,9 @@ export function validateResponseQuality(
   }
   if (failures.includes('UNSUPPORTED_CLAIMS')) {
     feedback += ' Afirmas que la tienda está abierta pero para esa fecha existe un festivo/cierre total.';
+  }
+  if (failures.includes('UNSUPPORTED_PRICE_CLAIM')) {
+    feedback += ' Has mencionado un precio o tarifa que no coincide con las cifras oficiales de los hechos deterministas resueltos.';
   }
 
   return {
