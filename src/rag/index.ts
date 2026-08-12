@@ -271,8 +271,8 @@ export async function updateTextThread(sourceId: string, title: string, text: st
   return { sourceId, chunksProcessed: results.length };
 }
 
-export async function searchSimilarChunks(commerceId: string, query: string, limit: number = 3) {
-  const queryEmbedding = await createEmbedding(query);
+export async function searchSimilarChunks(commerceId: string, query: string, limit: number = 3, existingEmbedding?: number[]) {
+  const queryEmbedding = existingEmbedding || await createEmbedding(query);
 
   // Hybrid Search (BM25 + PgVector) with Reciprocal Rank Fusion (RRF)
   // Umbral (Threshold) de 0.45 para la parte vectorial

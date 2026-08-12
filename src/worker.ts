@@ -108,13 +108,23 @@ const worker = new Worker(
           return;
         }
 
-        // ABORTAR FLUJO DE IA SI ESTÁ EN CONTROL HUMANO O REQUIERE ATENCIÓN HUMANA (CERO AMBIGÜEDAD)
+        // GESTIÓN DE TIMEOUT Y CONTROL HUMANO
         if (session.status === 'HUMAN_ACTIVE' || session.status === 'HUMAN_REQUIRED' || session.controlBy === 'HUMAN') {
-          console.log(`[Worker] Sesión ${session.id} bajo control/espera humana (status: ${session.status}). IA pausada.`);
-          if (session.status === 'HUMAN_REQUIRED' && !session.waitingSince) {
-            await prisma.session.update({ where: { id: session.id }, data: { waitingSince: new Date() } });
+          // Si la sesión lleva más de 24 horas en espera sin respuesta humana, se reactiva automáticamente para la IA
+          const isStale = session.waitingSince && (Date.now() - new Date(session.waitingSince).getTime() > 24 * 60 * 60 * 1000);
+          if (isStale) {
+            console.log(`[Worker] Sesión ${session.id} desatendida por más de 24h. Autoresolviendo y reactivando la IA.`);
+            session = await prisma.session.update({
+              where: { id: session.id },
+              data: { status: 'AI_ACTIVE', controlBy: 'AI', waitingSince: null, humanReason: null }
+            });
+          } else {
+            console.log(`[Worker] Sesión ${session.id} bajo control/espera humana (status: ${session.status}). IA pausada.`);
+            if (session.status === 'HUMAN_REQUIRED' && !session.waitingSince) {
+              await prisma.session.update({ where: { id: session.id }, data: { waitingSince: new Date() } });
+            }
+            return;
           }
-          return;
         }
 
         // CHECK BUDGET via FeatureGuard
@@ -138,11 +148,19 @@ const worker = new Worker(
           content: m.content
         }));
 
-        // 4. RAG: Recuperamos conocimiento basado en el último mensaje del usuario
-        const { searchSimilarChunks } = require('./rag/index');
+        // Semantic Caching & RAG Vectorization: Generar embedding una sola vez
+        const { createEmbedding, searchSimilarChunks } = require('./rag/index');
+        const todayStr = new Date().toISOString().split('T')[0];
+        const cacheQueryText = `[Fecha: ${todayStr}] ${cleanText}`;
+        const queryHash = require('crypto').createHash('sha256').update(cacheQueryText).digest('hex');
         
+        const queryEmbedding = await Sentry.startSpan({ op: 'create-embedding', name: 'Vectorizing user text' }, () =>
+          createEmbedding(cacheQueryText)
+        );
+
+        // 4. RAG: Recuperamos conocimiento basándonos en el texto y reutilizamos el embedding
         const similarChunks = await Sentry.startSpan({ op: 'rag-retrieval', name: 'Querying vector chunks' }, () =>
-          searchSimilarChunks(commerce.id, cleanText, 3)
+          searchSimilarChunks(commerce.id, cleanText, 3, queryEmbedding)
         );
 
         const knowledgeContext = similarChunks.map((c: any) => `[Fuente: ${c.sourcename || 'Desconocida'}]\n${c.content}`).join('\n\n');
@@ -157,16 +175,6 @@ ${knowledgeContext || 'No hay información adicional disponible.'}
 REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NINGÚN CONCEPTO debes responder a preguntas de cultura general, matemáticas, programación, historia, curiosidades u otros temas que no estén estrictamente relacionados con los productos, horarios, o servicios de la tienda. Si el usuario hace una pregunta fuera de esta temática, o si la información no está en el contexto, responde amablemente diciendo que solo puedes ayudar con temas relacionados con la tienda y sus productos, y no inventes datos.
         `.trim();
 
-        // Semantic Caching: Buscamos si ya respondimos a esto hoy (incluimos fecha para vigencia de reglas y festivos)
-        const { createEmbedding } = require('./rag/index');
-        const todayStr = new Date().toISOString().split('T')[0];
-        const cacheQueryText = `[Fecha: ${todayStr}] ${cleanText}`;
-        const queryHash = require('crypto').createHash('sha256').update(cacheQueryText).digest('hex');
-        
-        const queryEmbedding = await Sentry.startSpan({ op: 'create-embedding', name: 'Vectorizing user text' }, () =>
-          createEmbedding(cacheQueryText)
-        );
-        
         // Distancia < 0.05 significa > 0.95 similitud
         const cachedResponses = await Sentry.startSpan({ op: 'semantic-cache-lookup', name: 'Semantic Cache Lookup' }, () =>
           prisma.$queryRaw<Array<{ response: string }>>`

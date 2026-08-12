@@ -38,10 +38,37 @@ export function detectIntentAndContext(userQuestion: string, referenceDate: Date
 
   const targetDate = new Date(referenceDate);
 
-  if (q.includes('mañana') && !q.includes('por la mañana')) {
-    targetDate.setDate(targetDate.getDate() + 1);
-  } else if (q.includes('pasado mañana')) {
+  if (q.includes('pasado mañana')) {
     targetDate.setDate(targetDate.getDate() + 2);
+  } else if (q.includes('mañana') && !q.includes('por la mañana')) {
+    targetDate.setDate(targetDate.getDate() + 1);
+  } else if (q.includes('el finde') || q.includes('fin de semana')) {
+    // Sábado de la semana actual
+    const currentDay = targetDate.getDay();
+    const daysUntilSaturday = (6 - currentDay + 7) % 7;
+    targetDate.setDate(targetDate.getDate() + (daysUntilSaturday === 0 ? 0 : daysUntilSaturday));
+  } else {
+    // Parsear "en X días"
+    const inDaysMatch = q.match(/en\s+(\d+)\s+días/);
+    if (inDaysMatch && inDaysMatch[1]) {
+      targetDate.setDate(targetDate.getDate() + parseInt(inDaysMatch[1], 10));
+    }
+
+    // Parsear "próximo/este [lunes|martes...]"
+    const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'miercoles', 'jueves', 'viernes', 'sábado', 'sabado'];
+    const targetDayIndex = [0, 1, 2, 3, 3, 4, 5, 6, 6];
+    
+    for (let d = 0; d < dayNames.length; d++) {
+      const name = dayNames[d];
+      if (name && (q.includes(`próximo ${name}`) || q.includes(`proximo ${name}`) || q.includes(`este ${name}`))) {
+        const desiredDay = targetDayIndex[d]!;
+        const currentDay = targetDate.getDay();
+        let diff = desiredDay - currentDay;
+        if (diff <= 0) diff += 7;
+        targetDate.setDate(targetDate.getDate() + diff);
+        break;
+      }
+    }
   }
 
   const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];

@@ -4,8 +4,29 @@ import bcrypt from 'bcrypt';
 import { signToken } from '../../../../lib/jwt';
 import { cookies } from 'next/headers';
 
+const ipAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(ip: string, maxAttempts = 5, windowMs = 60000): boolean {
+  const now = Date.now();
+  const entry = ipAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    ipAttempts.set(ip, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+  if (entry.count >= maxAttempts) {
+    return true;
+  }
+  entry.count++;
+  return false;
+}
+
 export async function POST(request: Request) {
   try {
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    if (isRateLimited(clientIp, 5, 60000)) {
+      return NextResponse.json({ error: 'Demasiados intentos fallidos. Por favor espera 1 minuto.' }, { status: 429 });
+    }
+
     const { email, password } = await request.json();
 
     if (!email || !password) {

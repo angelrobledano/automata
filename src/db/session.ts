@@ -53,3 +53,23 @@ export async function addMessageToSession(sessionId: string, role: 'user' | 'ass
     },
   });
 }
+
+/**
+ * Resuelve automáticamente sesiones que llevan más de 24 horas desatendidas en espera de operador
+ */
+export async function cleanStaleHumanEscalations(commerceId?: string): Promise<number> {
+  const staleThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const result = await prisma.session.updateMany({
+    where: {
+      ...(commerceId ? { commerceId } : {}),
+      status: 'HUMAN_REQUIRED',
+      waitingSince: { lte: staleThreshold }
+    },
+    data: {
+      status: 'RESOLVED',
+      controlBy: 'AI',
+      waitingSince: null
+    }
+  });
+  return result.count;
+}

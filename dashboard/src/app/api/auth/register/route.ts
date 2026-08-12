@@ -4,8 +4,29 @@ import bcrypt from 'bcrypt';
 import { signToken } from '../../../../lib/jwt';
 import { cookies } from 'next/headers';
 
+const regIpAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function isRegisterRateLimited(ip: string, maxAttempts = 5, windowMs = 3600000): boolean {
+  const now = Date.now();
+  const entry = regIpAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    regIpAttempts.set(ip, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+  if (entry.count >= maxAttempts) {
+    return true;
+  }
+  entry.count++;
+  return false;
+}
+
 export async function POST(request: Request) {
   try {
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    if (isRegisterRateLimited(clientIp, 5, 3600000)) {
+      return NextResponse.json({ error: 'Has alcanzado el límite de registros. Por favor espera antes de intentar de nuevo.' }, { status: 429 });
+    }
+
     const { name, email, password } = await request.json();
 
     if (!name || !email || !password) {

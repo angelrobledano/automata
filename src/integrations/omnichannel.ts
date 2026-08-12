@@ -102,3 +102,19 @@ async function sendMetaGraphMessage(accountId: string, token: string, recipientI
 
   return data;
 }
+
+/**
+ * Comprueba la salud del token del canal y avisa si caduca en menos de 7 días
+ */
+export function checkChannelTokenHealth(channelConnection: ChannelConnection): { isExpiringSoon: boolean; daysRemaining?: number } {
+  if (!channelConnection.tokenExpiresAt) return { isExpiringSoon: false };
+  const now = Date.now();
+  const expiresAt = new Date(channelConnection.tokenExpiresAt).getTime();
+  const msRemaining = expiresAt - now;
+  const daysRemaining = Math.floor(msRemaining / (1000 * 60 * 60 * 24));
+  
+  return {
+    isExpiringSoon: daysRemaining <= 7,
+    daysRemaining
+  };
+}

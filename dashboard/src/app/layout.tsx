@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { DashboardShell } from "@/components/DashboardShell";
 import { AnalyticsProvider } from "@/providers/AnalyticsProvider";
+import { CookieBanner } from "@/components/CookieBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,6 +24,7 @@ export default function RootLayout({
           <DashboardShell>
             {children}
           </DashboardShell>
+          <CookieBanner />
         </AnalyticsProvider>
       </body>
     </html>
