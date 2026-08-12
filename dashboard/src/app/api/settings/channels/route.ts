@@ -20,8 +20,6 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { waPhoneNumberId, waToken, wooUrl, wooConsumerKey, wooConsumerSecret } = body;
 
-    const updateData: any = {};
-
     if (waPhoneNumberId && waToken) {
       const checkUrl = `https://graph.facebook.com/v19.0/${waPhoneNumberId}`;
       const ping = await fetch(checkUrl, {
@@ -32,23 +30,58 @@ export async function PATCH(request: Request) {
       if (!ping || !ping.ok) {
         return NextResponse.json({ error: 'Las credenciales de WhatsApp son inválidas o caducadas.' }, { status: 400 });
       }
-      updateData.waPhoneNumberId = waPhoneNumberId;
-      updateData.waToken = encrypt(waToken);
+
+      // Buscar si existe conexión previa
+      const existingConn = await prisma.channelConnection.findFirst({
+        where: { commerceId: payload.commerceId as string, provider: 'META' }
+      });
+
+      if (existingConn) {
+        await prisma.channelConnection.update({
+          where: { id: existingConn.id },
+          data: {
+            channelPhoneId: waPhoneNumberId,
+            accessToken: encrypt(waToken),
+            status: 'CONNECTED',
+            lastValidatedAt: new Date()
+          }
+        });
+      } else {
+        await prisma.channelConnection.create({
+          data: {
+            commerceId: payload.commerceId as string,
+            provider: 'META',
+            channelPhoneId: waPhoneNumberId,
+            accessToken: encrypt(waToken),
+            status: 'CONNECTED',
+            lastValidatedAt: new Date()
+          }
+        });
+      }
     }
 
     if (wooUrl && wooConsumerKey && wooConsumerSecret) {
       if (!wooUrl.startsWith('https://')) {
         return NextResponse.json({ error: 'La URL de WooCommerce debe ser HTTPS' }, { status: 400 });
       }
-      updateData.wooUrl = wooUrl;
-      updateData.wooConsumerKey = wooConsumerKey;
-      updateData.wooConsumerSecret = wooConsumerSecret;
-    }
+      
+      const currentCommerce = await prisma.commerce.findUnique({
+        where: { id: payload.commerceId as string },
+        select: { providerMetadata: true }
+      });
+      const currentMeta = (currentCommerce?.providerMetadata as any) || {};
 
-    if (Object.keys(updateData).length > 0) {
       await prisma.commerce.update({
         where: { id: payload.commerceId as string },
-        data: updateData
+        data: {
+          providerMetadata: {
+            ...currentMeta,
+            wooUrl,
+            wooConsumerKey: encrypt(wooConsumerKey),
+            wooConsumerSecret: encrypt(wooConsumerSecret),
+            wooConnectedAt: new Date().toISOString()
+          }
+        }
       });
     }
 

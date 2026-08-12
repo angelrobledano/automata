@@ -22,7 +22,7 @@ async function throttleOutgoing(phoneNumberId: string): Promise<void> {
 export async function sendWhatsAppMessage(phoneNumberId: string, token: string, to: string, text: string) {
   try {
     await throttleOutgoing(phoneNumberId);
-    const url = `https://graph.facebook.com/v17.0/${phoneNumberId}/messages`;
+    const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
     const payload = buildWhatsAppTextPayload(to, text);
 
     await axios.post(url, payload, {
@@ -45,7 +45,7 @@ export async function sendWhatsAppMessage(phoneNumberId: string, token: string, 
 export async function sendWhatsAppFormattedMessage(phoneNumberId: string, token: string, to: string, formatted: FormattedMessage) {
   try {
     await throttleOutgoing(phoneNumberId);
-    const url = `https://graph.facebook.com/v17.0/${phoneNumberId}/messages`;
+    const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
     const payload = buildWhatsAppPayload(to, formatted);
 
     await axios.post(url, payload, {
