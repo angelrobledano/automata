@@ -4,6 +4,10 @@ import { encrypt } from '../../utils/crypto';
 export function getMetaAppCredentials(hostOrigin?: string) {
   const appId = process.env.META_APP_ID || process.env.META_CLIENT_ID || process.env.NEXT_PUBLIC_META_APP_ID || '2815161522203005';
   const appSecret = process.env.META_APP_SECRET || 'af9c518e052743e06fd7ee4089db9397';
+
+  if (process.env.NODE_ENV === 'production' && (!process.env.META_APP_ID || !process.env.META_APP_SECRET)) {
+    console.warn('[SECURITY WARNING] META_APP_ID o META_APP_SECRET no están configuradas en las variables de entorno de producción!');
+  }
   
   let baseUrl = hostOrigin || process.env.NEXT_PUBLIC_API_URL || 'https://automata-pied.vercel.app';
   if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {

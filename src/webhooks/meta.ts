@@ -9,8 +9,10 @@ export const verifyWebhook = (req: Request, res: Response) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  // En producción, este token debería venir de variables de entorno
   const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'test_token';
+  if (process.env.NODE_ENV === 'production' && !process.env.META_VERIFY_TOKEN) {
+    console.warn('[SECURITY WARNING] META_VERIFY_TOKEN no está configurada en producción!');
+  }
 
   if (mode && token) {
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
@@ -24,6 +26,38 @@ export const verifyWebhook = (req: Request, res: Response) => {
   }
 };
 
+import crypto from 'crypto';
+
+export const validateMetaSignature = (req: Request): boolean => {
+  const signature = req.headers['x-hub-signature-256'] as string;
+  const appSecret = process.env.META_APP_SECRET;
+
+  if (!appSecret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[Security Warning] META_APP_SECRET no configurado para validar la firma del webhook');
+    }
+    return true;
+  }
+
+  if (!signature) {
+    console.warn('[Security] Webhook rechazado: Falta cabecera x-hub-signature-256');
+    return false;
+  }
+
+  try {
+    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const expectedSignature = 'sha256=' + crypto
+      .createHmac('sha256', appSecret)
+      .update(rawBody)
+      .digest('hex');
+
+    return signature === expectedSignature;
+  } catch (err) {
+    console.error('[Security] Error calculando firma HMAC:', err);
+    return false;
+  }
+};
+
 // Rate limiter configuration
 const RATE_LIMIT_MESSAGES = 15;
 const RATE_LIMIT_WINDOW_SEC = 60;
@@ -31,6 +65,10 @@ const RATE_LIMIT_WINDOW_SEC = 60;
 // Recepción de mensajes de WhatsApp
 export const receiveMessage = async (req: Request, res: Response) => {
   try {
+    if (!validateMetaSignature(req)) {
+      return res.status(401).send('Firma no válida');
+    }
+
     const body = req.body;
 
     if (body.object === 'whatsapp_business_account') {
