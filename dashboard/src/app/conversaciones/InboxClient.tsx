@@ -249,7 +249,42 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
       );
     }
     
-    return <p className="whitespace-pre-wrap leading-relaxed">{content}</p>;
+    let parsedContent = content;
+    const buttons: string[] = [];
+    const buttonRegex = /\[(?:Botón|Acción):\s*([^\]]+)\]/gi;
+    
+    parsedContent = parsedContent.replace(buttonRegex, (_: string, p1: string) => {
+      buttons.push(p1.trim());
+      return '';
+    });
+
+    const htmlContent = parsedContent
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;")
+      .replace(/\*([^\*]+)\*/g, '<strong>$1</strong>')
+      .replace(/_([^_]+)_/g, '<em>$1</em>')
+      .replace(/~([^~]+)~/g, '<del>$1</del>')
+      .replace(/(\d+(?:[.,]\d+)?\s*€(?:\/\w+)?)/g, '<span class="bg-blue-50 text-blue-700 font-semibold px-1 rounded inline-block">$1</span>')
+      .trim();
+
+    return (
+      <div className="flex flex-col gap-2">
+        {htmlContent && (
+          <p 
+            className="whitespace-pre-wrap leading-relaxed" 
+            dangerouslySetInnerHTML={{ __html: htmlContent }} 
+          />
+        )}
+        {buttons.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {buttons.map((btn, i) => (
+              <button key={i} className="bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full cursor-default hover:bg-blue-700 transition-colors">
+                {btn}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -625,18 +660,29 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
 
                   return (
                     <div key={idx} className={`flex ${isUser ? 'justify-start' : 'justify-end'}`}>
-                      <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-xs shadow-2xs ${
-                        isUser 
-                          ? 'bg-white border border-slate-200 text-slate-900 rounded-tl-none' 
-                          : 'bg-blue-600 text-white rounded-tr-none font-medium'
-                      }`}>
-                        <div className="flex items-center justify-between gap-4 mb-1 text-[10px] opacity-75">
-                          <span className="font-bold">
-                            {isUser ? activeSession.customerIdentifier || 'Cliente' : 'Atención humana / IA'}
-                          </span>
-                          <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <div className={`flex flex-col ${isUser ? 'items-start' : 'items-end'} max-w-[75%]`}>
+                        <div className={`rounded-2xl px-4 py-2.5 text-xs shadow-2xs ${
+                          isUser 
+                            ? 'bg-white border border-slate-200 text-slate-900 rounded-tl-none' 
+                            : 'bg-blue-600 text-white rounded-tr-none font-medium'
+                        }`}>
+                          <div className="flex items-center justify-between gap-4 mb-1 text-[10px] opacity-75">
+                            <span className="font-bold">
+                              {isUser ? activeSession.customerIdentifier || 'Cliente' : 'Atención humana / IA'}
+                            </span>
+                            <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                          {renderMessageContent(msg)}
                         </div>
-                        {renderMessageContent(msg)}
+                        {!isUser && (
+                          <div className="text-[9px] text-slate-400 font-medium mt-0.5 px-1">
+                            {activeSession.channelConnection?.provider?.toLowerCase() === 'instagram' 
+                              ? '📸 Instagram Direct' 
+                              : activeSession.channelConnection?.provider?.toLowerCase() === 'whatsapp' 
+                                ? (msg.content?.match(/\[(?:Botón|Acción):/i) ? '📱 WhatsApp · Botones interactivos' : '📱 WhatsApp · Texto') 
+                                : '💬 Canal directo'}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

@@ -30,7 +30,16 @@ export async function generateAIResponse(
       `Empresa: ${commerce.name || 'Mi Negocio'}`,
       commerce.address ? `Dirección: ${commerce.address}` : null,
       commerce.businessHours ? `Horarios habituales: ${commerce.businessHours}` : null,
-      commerce.systemPrompt ? `Estilo conversacional y tono:\n${commerce.systemPrompt}` : null
+      commerce.systemPrompt ? `Estilo conversacional y tono:\n${commerce.systemPrompt}` : null,
+      // Reglas de Diseño Conversacional
+      `REGLAS DE FORMATO CONVERSACIONAL:
+- Máximo 3 líneas por párrafo. Usa saltos de línea entre bloques.
+- Si el cliente hace varias preguntas en un mensaje, responde cada una en un bloque separado con un salto de línea entre ellos.
+- Usa *negrita* para destacar datos clave (precios, horarios, direcciones).
+- Emojis con moderación: máximo 2 por respuesta, solo si aportan claridad.
+- Termina siempre con una pregunta de continuidad o sugerencia de acción clara.
+- Si ofreces opciones al cliente, márcalas con viñetas simples (•).
+- NUNCA generes párrafos de más de 3 líneas ni listas interminables.`
     ].filter(Boolean).join('\n');
 
     // 3. Response Generation + Response Quality Layer + Auditoría

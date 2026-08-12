@@ -4,7 +4,8 @@ import dotenv from 'dotenv';
 import { prisma } from './db/prisma';
 import { getOrCreateSession, getSessionMessages, addMessageToSession } from './db/session';
 import { generateAIResponse } from './ai';
-import { sendOmnichannelMessage } from './integrations/omnichannel';
+import { sendOmnichannelMessage, sendOmnichannelFormattedMessage } from './integrations/omnichannel';
+import { formatForChannel, ChannelType } from './formatters/channel-formatter';
 import * as Sentry from '@sentry/node';
 import { performance } from 'perf_hooks';
 
@@ -205,8 +206,10 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
         await addMessageToSession(session.id, 'assistant', aiResponse);
         connection.publish('chat_updates', JSON.stringify({ sessionId: session.id, message: { role: 'assistant', content: aiResponse, createdAt: new Date().toISOString() } }));
 
-        // 6. Enviamos el mensaje al cliente final vía la red correspondiente
-        await sendOmnichannelMessage(commerce, channelConnection, customerIdentifier, aiResponse);
+        // 6. Formateamos la respuesta según el canal y enviamos al cliente final
+        const channelType: ChannelType = (channel === 'WHATSAPP' || channel === 'INSTAGRAM' || channel === 'MESSENGER') ? channel : 'WHATSAPP';
+        const formattedMsg = formatForChannel(aiResponse, channelType);
+        await sendOmnichannelFormattedMessage(commerce, channelConnection, customerIdentifier, formattedMsg);
         
         // 7. Descontar del presupuesto mediante FeatureGuard
         const estimatedTokens = Math.floor((ragPrompt.length + aiResponse.length) / 4);

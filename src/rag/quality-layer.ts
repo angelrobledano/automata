@@ -127,6 +127,12 @@ REGLAS STRICTAS DE RESPUESTA:
 1. NUNCA combines un horario anulado con el horario vigente. Si hay horario de verano activo, no menciones el horario habitual de 09:00 a 20:00.
 2. Si el cliente pregunta si abren por la tarde en verano, responde directamente con la franja de tarde de verano (19:30 a 21:30).
 3. Responde de forma clara, amable y concisa sin divagar ni dar información innecesaria.
+4. Si el cliente formula más de una pregunta, estructura tu respuesta en bloques breves y diferenciados separados por un salto de línea.
+5. Máximo 3 líneas por párrafo. PROHIBIDO generar párrafos densos o listas interminables.
+6. Usa *negrita* (formato WhatsApp) para destacar precios, horarios y datos clave.
+7. Termina siempre con una pregunta de continuidad o sugerencia clara de siguiente paso.
+8. Emojis con moderación: máximo 2 por respuesta.
+9. Si ofreces opciones, márcalas con viñetas simples (•).
   `.trim();
 
   const messages: any[] = [

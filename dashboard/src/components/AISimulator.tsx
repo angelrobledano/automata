@@ -136,7 +136,26 @@ export function AISimulator() {
             {/* Messages */}
             <div className="flex-1 p-4 overflow-y-auto bg-muted/30 flex flex-col gap-4">
               <AnimatePresence initial={false}>
-                {messages.map((msg, i) => (
+                {messages.map((msg, i) => {
+                  const parseRichText = (text: string) => {
+                    let parsedContent = text || '';
+                    const buttons: string[] = [];
+                    const buttonRegex = /\[(?:Botón|Acción):\s*([^\]]+)\]/gi;
+                    parsedContent = parsedContent.replace(buttonRegex, (_, p1) => {
+                      buttons.push(p1.trim());
+                      return '';
+                    });
+                    let htmlContent = parsedContent
+                      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;")
+                      .replace(/\*([^\*]+)\*/g, '<strong>$1</strong>')
+                      .replace(/_([^_]+)_/g, '<em>$1</em>')
+                      .replace(/~([^~]+)~/g, '<del>$1</del>')
+                      .replace(/(\d+(?:[.,]\d+)?\s*€(?:\/\w+)?)/g, '<span class="bg-blue-50 text-blue-700 font-semibold px-1 rounded inline-block">$1</span>')
+                      .trim();
+                    return { htmlContent, buttons };
+                  };
+                  const parsed = parseRichText(msg.content);
+                  return (
                   <motion.div 
                     key={i} 
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -147,15 +166,29 @@ export function AISimulator() {
                     {msg.role === 'assistant' && (
                       <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs flex-shrink-0">🤖</div>
                     )}
-                    <div className={`px-4 py-2 text-sm max-w-[80%] ${
+                    <div className={`px-4 py-2 text-sm max-w-[80%] flex flex-col gap-2 ${
                       msg.role === 'user' 
                         ? 'bg-primary text-primary-foreground rounded-lg rounded-tr-sm shadow-none' 
                         : 'bg-background text-foreground rounded-lg rounded-tl-sm border border-border shadow-none'
                     }`}>
-                      {msg.content}
+                      {parsed.htmlContent && (
+                        <div 
+                          className="whitespace-pre-wrap leading-relaxed" 
+                          dangerouslySetInnerHTML={{ __html: parsed.htmlContent }} 
+                        />
+                      )}
+                      {parsed.buttons.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {parsed.buttons.map((btn, idx) => (
+                            <button key={idx} className="bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
+                              {btn}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
-                ))}
+                )})}
               </AnimatePresence>
               
               <AnimatePresence>
