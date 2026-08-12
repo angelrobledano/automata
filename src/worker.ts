@@ -157,12 +157,14 @@ ${knowledgeContext || 'No hay información adicional disponible.'}
 REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NINGÚN CONCEPTO debes responder a preguntas de cultura general, matemáticas, programación, historia, curiosidades u otros temas que no estén estrictamente relacionados con los productos, horarios, o servicios de la tienda. Si el usuario hace una pregunta fuera de esta temática, o si la información no está en el contexto, responde amablemente diciendo que solo puedes ayudar con temas relacionados con la tienda y sus productos, y no inventes datos.
         `.trim();
 
-        // Semantic Caching: Buscamos si ya respondimos a esto
+        // Semantic Caching: Buscamos si ya respondimos a esto hoy (incluimos fecha para vigencia de reglas y festivos)
         const { createEmbedding } = require('./rag/index');
-        const queryHash = require('crypto').createHash('sha256').update(cleanText).digest('hex');
+        const todayStr = new Date().toISOString().split('T')[0];
+        const cacheQueryText = `[Fecha: ${todayStr}] ${cleanText}`;
+        const queryHash = require('crypto').createHash('sha256').update(cacheQueryText).digest('hex');
         
         const queryEmbedding = await Sentry.startSpan({ op: 'create-embedding', name: 'Vectorizing user text' }, () =>
-          createEmbedding(cleanText)
+          createEmbedding(cacheQueryText)
         );
         
         // Distancia < 0.05 significa > 0.95 similitud

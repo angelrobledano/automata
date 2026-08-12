@@ -34,10 +34,18 @@ export class FeatureGuard {
       return { allowed: false, reason: 'Commerce not found' };
     }
 
+    // 0. Lifetime free or active trial check
+    if (commerce.isLifetimeFree) {
+      return { allowed: true };
+    }
+
     // 1. Get the active plan
     const activeSub = commerce.subscriptions[0];
     if (!activeSub) {
-      // Free tier logic or blocked
+      // Si el comercio está en periodo de prueba o activo pero sin suscripción formal aún
+      if (commerce.status === 'TRIAL' || commerce.status === 'ACTIVE' || commerce.subscriptionStatus === 'ACTIVE') {
+        return { allowed: true };
+      }
       return { allowed: false, reason: 'No active subscription' };
     }
 

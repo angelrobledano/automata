@@ -1,7 +1,15 @@
 import crypto from 'crypto';
 
+function getEncryptionKey() {
+  const key = process.env.ENCRYPTION_KEY;
+  if (process.env.NODE_ENV === 'production' && (!key || key === '0123456789abcdef0123456789abcdef')) {
+    console.warn('[SECURITY WARNING] ENCRYPTION_KEY missing or default in production environment!');
+  }
+  return key || '0123456789abcdef0123456789abcdef';
+}
+
 const ALGORITHM = 'aes-256-gcm';
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef'; // Default for dev if missing
+const ENCRYPTION_KEY = getEncryptionKey();
 const IV_LENGTH = 16;
 
 export function encrypt(text: string): string {

@@ -39,14 +39,17 @@ export async function POST(request: Request) {
     const encryptedKey = encrypt(wooConsumerKey);
     const encryptedSecret = encrypt(wooConsumerSecret);
 
-    // await prisma.commerce.update({
-    //   where: { id: payload.commerceId as string },
-    //   data: {
-    //     wooUrl,
-    //     wooConsumerKey: encryptedKey,
-    //     wooConsumerSecret: encryptedSecret
-    //   }
-    // });
+    await prisma.commerce.update({
+      where: { id: payload.commerceId as string },
+      data: {
+        providerMetadata: {
+          wooUrl,
+          wooConsumerKey: encryptedKey,
+          wooConsumerSecret: encryptedSecret,
+          wooConnectedAt: new Date().toISOString()
+        }
+      }
+    });
 
     return NextResponse.json({ success: true, redirect: '/onboarding/meta' });
   } catch (error: any) {

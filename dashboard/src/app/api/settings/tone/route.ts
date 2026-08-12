@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../../src/db/prisma';
+import { verifyToken } from '../../../../lib/jwt';
+import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -8,22 +10,31 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+    const payload = await verifyToken(token);
+    if (!payload) return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
+
+    const commerceId = payload.commerceId as string;
+    if (!commerceId) return NextResponse.json({ error: 'Comercio no asociado' }, { status: 400 });
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const commerceId = formData.get('commerceId') as string || 'commerce-seed-id';
 
     if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+      return NextResponse.json({ error: 'No se subió ningún archivo' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const textContent = buffer.toString('utf-8');
     
-    // Tomamos una muestra (por ejemplo, los últimos/primeros 5000 caracteres para no exceder tokens)
+    // Muestra de los primeros 5000 caracteres
     const sampleText = textContent.slice(0, 5000);
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o", // O un modelo rápido
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -40,8 +51,7 @@ export async function POST(request: Request) {
 
     const suggestedPrompt = completion.choices[0].message.content?.trim() || "";
 
-    // Actualizamos la DB (si deseamos autoguardar) o solo devolvemos la sugerencia
-    // Optamos por actualizar directamente para la magia de "1-click"
+    // Actualizamos la DB para el comercio autenticado
     await prisma.commerce.update({
       where: { id: commerceId },
       data: { systemPrompt: suggestedPrompt }
@@ -50,6 +60,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, prompt: suggestedPrompt });
   } catch (error: any) {
     console.error('Error generating tone:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

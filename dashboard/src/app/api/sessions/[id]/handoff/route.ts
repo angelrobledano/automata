@@ -1,16 +1,34 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../../../src/db/prisma';
+import { verifyToken } from '@/lib/jwt';
+import { cookies } from 'next/headers';
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+    const payload = await verifyToken(token);
+    if (!payload) return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
+
     const params = await props.params;
     const { id } = params;
     const body = await request.json();
     const { action, instruction, userId } = body; 
-    // Actions: 'take_control', 'return_ai', 'resolve', 'resolve_and_return_ai'
+    // Actions: 'take_control', 'return_ai', 'resolve', 'resolve_and_return_ai', 'close_session'
 
     if (!['take_control', 'return_ai', 'resolve', 'resolve_and_return_ai', 'close_session'].includes(action)) {
       return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
+    }
+
+    // Verificar pertenencia al tenant antes de actualizar
+    const existingSession = await prisma.session.findFirst({
+      where: { id, commerceId: payload.commerceId as string }
+    });
+
+    if (!existingSession) {
+      return NextResponse.json({ error: 'Sesión no encontrada o no autorizada' }, { status: 404 });
     }
 
     let updateData: any = {};
@@ -20,7 +38,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         status: 'HUMAN_ACTIVE',
         controlBy: 'HUMAN',
         waitingSince: null,
-        assignedUserId: userId || null
+        assignedUserId: userId || payload.userId || null
       };
     } else if (action === 'return_ai') {
       updateData = {
@@ -71,6 +89,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     return NextResponse.json({ success: true, session });
   } catch (error: any) {
     console.error('Error updating handoff status:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
