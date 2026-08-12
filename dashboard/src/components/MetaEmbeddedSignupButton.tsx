@@ -83,9 +83,25 @@ export function MetaEmbeddedSignupButton({
 
   const launchEmbeddedSignup = () => {
     setLoading(true);
-    const configId = process.env.NEXT_PUBLIC_META_CONFIG_ID || 'WHATSAPP_EMBEDDED_SIGNUP';
+    const configId = process.env.NEXT_PUBLIC_META_CONFIG_ID;
     
     if (window.FB) {
+      const loginOptions: any = {
+        response_type: 'code',
+        override_default_response_type: true
+      };
+
+      if (configId && configId !== 'WHATSAPP_EMBEDDED_SIGNUP') {
+        loginOptions.config_id = configId;
+        loginOptions.extras = {
+          setup: {
+            solution_name: 'Automata IA'
+          }
+        };
+      } else {
+        loginOptions.scope = 'whatsapp_business_management,whatsapp_business_messaging';
+      }
+
       window.FB.login(
         (response: any) => {
           setLoading(false);
@@ -103,16 +119,7 @@ export function MetaEmbeddedSignupButton({
             window.location.href = '/api/meta/auth';
           }
         },
-        {
-          config_id: configId,
-          response_type: 'code',
-          override_default_response_type: true,
-          extras: {
-            setup: {
-              solution_name: 'Automata IA'
-            }
-          }
-        }
+        loginOptions
       );
     } else {
       // Redirección directa como respaldo si el SDK no ha cargado aún
