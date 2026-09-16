@@ -4,6 +4,19 @@ import { WooCommerceOrderProvider } from './WooCommerceOrderProvider';
 import { ShopifyOrderProvider } from './ShopifyOrderProvider';
 import { prisma } from '../db/prisma';
 import { getBusinessStatus } from '../utils/businessHours';
+import IORedis from 'ioredis';
+
+let redisPub: IORedis | null = null;
+function getRedisPub(): IORedis {
+  if (!redisPub) {
+    redisPub = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+      lazyConnect: true
+    });
+  }
+  return redisPub;
+}
 export class OrderService {
   private static localProvider = new LocalOrderProvider();
   private static wooProvider = new WooCommerceOrderProvider();
@@ -41,6 +54,30 @@ export class OrderService {
     }
 
     const provider = await this.getProviderForCommerce(params.commerceId);
-    return provider.createOrder({ ...params, notes: finalNotes });
+    const result = await provider.createOrder({ ...params, notes: finalNotes });
+
+    if (result.success && result.orderId) {
+      try {
+        const createdOrder = await prisma.order.findUnique({
+          where: { id: result.orderId }
+        });
+
+        if (createdOrder) {
+          const pub = getRedisPub();
+          await pub.publish('order_events', JSON.stringify({
+            type: 'NEW_ORDER',
+            commerceId: params.commerceId,
+            order: {
+              ...createdOrder,
+              isOutOfHours: !status.isOpen
+            }
+          }));
+        }
+      } catch (pubErr) {
+        console.error('[OrderService] Error publicando evento order_events en Redis:', pubErr);
+      }
+    }
+
+    return result;
   }
 }

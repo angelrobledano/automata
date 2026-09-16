@@ -22,7 +22,11 @@ const io = new Server(server, {
 
 import rateLimit from 'express-rate-limit';
 
-app.use(express.json());
+app.use(express.json({
+  verify: (req: any, _res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 // GLOBAL RATE LIMITER
 const limiter = rateLimit({
@@ -49,15 +53,22 @@ app.get('/health', (req, res) => {
 
 // Setup Redis Subscriber for WebSockets
 const redisSub = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379');
-redisSub.subscribe('chat_updates', (err, count) => {
-  if (err) console.error('Error subscribing to Redis:', err);
+redisSub.subscribe('chat_updates', 'order_events', (err, count) => {
+  if (err) console.error('Error subscribing to Redis channels:', err);
+  else console.log(`[Socket.io] Suscrito a canales de Redis: chat_updates, order_events`);
 });
 
 redisSub.on('message', (channel, message) => {
-  if (channel === 'chat_updates') {
+  try {
     const data = JSON.parse(message);
-    // Emitimos el evento a todos los clientes conectados al Dashboard
-    io.emit('new_message', data);
+    if (channel === 'chat_updates') {
+      io.emit('new_message', data);
+    } else if (channel === 'order_events') {
+      console.log('[Socket.io] Retransmitiendo new_order:', data.order?.id);
+      io.emit('new_order', data);
+    }
+  } catch (e) {
+    console.error('[Socket.io] Error parseando mensaje de Redis:', e);
   }
 });
 
