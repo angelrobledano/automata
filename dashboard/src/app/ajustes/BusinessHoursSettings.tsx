@@ -16,13 +16,15 @@ interface DaySchedule {
 export interface WeeklySchedule {
   enabled: boolean;
   timezone: string;
-  monday: DaySchedule;
-  tuesday: DaySchedule;
-  wednesday: DaySchedule;
-  thursday: DaySchedule;
-  friday: DaySchedule;
-  saturday: DaySchedule;
-  sunday: DaySchedule;
+  days: {
+    monday: DaySchedule;
+    tuesday: DaySchedule;
+    wednesday: DaySchedule;
+    thursday: DaySchedule;
+    friday: DaySchedule;
+    saturday: DaySchedule;
+    sunday: DaySchedule;
+  };
 }
 
 interface BusinessHoursSettingsProps {
@@ -33,13 +35,15 @@ interface BusinessHoursSettingsProps {
 const defaultSchedule: WeeklySchedule = {
   enabled: true,
   timezone: 'Europe/Madrid',
-  monday: { closed: false, slots: [{ open: '09:00', close: '18:00' }] },
-  tuesday: { closed: false, slots: [{ open: '09:00', close: '18:00' }] },
-  wednesday: { closed: false, slots: [{ open: '09:00', close: '18:00' }] },
-  thursday: { closed: false, slots: [{ open: '09:00', close: '18:00' }] },
-  friday: { closed: false, slots: [{ open: '09:00', close: '18:00' }] },
-  saturday: { closed: true, slots: [{ open: '10:00', close: '14:00' }] },
-  sunday: { closed: true, slots: [{ open: '10:00', close: '14:00' }] },
+  days: {
+    monday: { closed: false, slots: [{ open: '09:00', close: '18:00' }] },
+    tuesday: { closed: false, slots: [{ open: '09:00', close: '18:00' }] },
+    wednesday: { closed: false, slots: [{ open: '09:00', close: '18:00' }] },
+    thursday: { closed: false, slots: [{ open: '09:00', close: '18:00' }] },
+    friday: { closed: false, slots: [{ open: '09:00', close: '18:00' }] },
+    saturday: { closed: true, slots: [{ open: '10:00', close: '14:00' }] },
+    sunday: { closed: true, slots: [{ open: '10:00', close: '14:00' }] },
+  }
 };
 
 const daysMap = [
@@ -70,39 +74,51 @@ export default function BusinessHoursSettings({ initialHours, onSave }: Business
     setSchedule({ ...schedule, timezone: e.target.value });
   };
 
-  const handleToggleDay = (dayKey: keyof WeeklySchedule) => {
-    const dayData = schedule[dayKey] as DaySchedule;
+  const handleToggleDay = (dayKey: keyof WeeklySchedule['days']) => {
+    const dayData = schedule.days[dayKey];
     setSchedule({
       ...schedule,
-      [dayKey]: { ...dayData, closed: !dayData.closed },
+      days: {
+        ...schedule.days,
+        [dayKey]: { ...dayData, closed: !dayData.closed },
+      }
     });
   };
 
-  const handleSlotChange = (dayKey: keyof WeeklySchedule, slotIndex: number, field: 'open' | 'close', value: string) => {
-    const dayData = schedule[dayKey] as DaySchedule;
+  const handleSlotChange = (dayKey: keyof WeeklySchedule['days'], slotIndex: number, field: 'open' | 'close', value: string) => {
+    const dayData = schedule.days[dayKey];
     const newSlots = [...dayData.slots];
     newSlots[slotIndex][field] = value;
     setSchedule({
       ...schedule,
-      [dayKey]: { ...dayData, slots: newSlots },
+      days: {
+        ...schedule.days,
+        [dayKey]: { ...dayData, slots: newSlots },
+      }
     });
   };
 
-  const addSlot = (dayKey: keyof WeeklySchedule) => {
-    const dayData = schedule[dayKey] as DaySchedule;
+  const addSlot = (dayKey: keyof WeeklySchedule['days']) => {
+    const dayData = schedule.days[dayKey];
     setSchedule({
       ...schedule,
-      [dayKey]: { ...dayData, slots: [...dayData.slots, { open: '00:00', close: '00:00' }] },
+      days: {
+        ...schedule.days,
+        [dayKey]: { ...dayData, slots: [...dayData.slots, { open: '00:00', close: '00:00' }] },
+      }
     });
   };
 
-  const removeSlot = (dayKey: keyof WeeklySchedule, slotIndex: number) => {
-    const dayData = schedule[dayKey] as DaySchedule;
+  const removeSlot = (dayKey: keyof WeeklySchedule['days'], slotIndex: number) => {
+    const dayData = schedule.days[dayKey];
     const newSlots = [...dayData.slots];
     newSlots.splice(slotIndex, 1);
     setSchedule({
       ...schedule,
-      [dayKey]: { ...dayData, slots: newSlots },
+      days: {
+        ...schedule.days,
+        [dayKey]: { ...dayData, slots: newSlots },
+      }
     });
   };
 
@@ -145,8 +161,8 @@ export default function BusinessHoursSettings({ initialHours, onSave }: Business
 
           <div className="space-y-4">
             {daysMap.map((day) => {
-              const dayKey = day.key as keyof WeeklySchedule;
-              const dayData = schedule[dayKey] as DaySchedule;
+              const dayKey = day.key as keyof WeeklySchedule['days'];
+              const dayData = schedule.days[dayKey];
               return (
                 <div key={day.key} className="flex flex-col sm:flex-row sm:items-center py-4 border-b border-slate-100 last:border-0 gap-4">
                   <div className="w-32 flex items-center">
