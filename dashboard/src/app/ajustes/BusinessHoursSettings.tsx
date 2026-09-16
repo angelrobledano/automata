@@ -201,7 +201,7 @@ export default function BusinessHoursSettings({ initialHours, onSave }: Business
                           {index > 0 && (
                             <button 
                               onClick={() => removeSlot(dayKey, index)}
-                              className="p-1.5 text-slate-400 hover:text-red-500 transition-colors rounded-md hover:bg-red-50"
+                              className="p-1.5 text-slate-500 hover:text-rose-600 transition-colors rounded-md hover:bg-slate-100"
                               title="Eliminar turno"
                             >
                               <Trash2 size={16} />
