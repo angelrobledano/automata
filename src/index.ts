@@ -22,11 +22,7 @@ const io = new Server(server, {
 
 import rateLimit from 'express-rate-limit';
 
-app.use(express.json({
-  verify: (req: any, _res, buf) => {
-    req.rawBody = buf;
-  }
-}));
+app.use(express.json());
 
 // GLOBAL RATE LIMITER
 const limiter = rateLimit({
