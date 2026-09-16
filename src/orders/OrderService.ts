@@ -46,7 +46,7 @@ export class OrderService {
       select: { businessHours: true }
     });
 
-    const status = getBusinessStatus(commerce?.businessHours);
+    const status = getBusinessStatus(commerce?.businessHours as any);
     let finalNotes = params.notes || '';
     if (!status.isOpen && status.nextOpeningText) {
       const tag = `[FUERA DE HORARIO - Apertura: ${status.nextOpeningText}]`;

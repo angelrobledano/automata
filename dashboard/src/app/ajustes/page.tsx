@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { MetaEmbeddedSignupButton } from '@/components/MetaEmbeddedSignupButton';
+import BusinessHoursSettings from './BusinessHoursSettings';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -18,6 +19,12 @@ export default function SettingsPage() {
   
   // Modals state
   const [showWooModal, setShowWooModal] = useState(false);
+  const [isConnectingWooAuto, setIsConnectingWooAuto] = useState(false);
+  const [showManualWoo, setShowManualWoo] = useState(false);
+  const [showShopifyModal, setShowShopifyModal] = useState(false);
+  const [isConnectingShopify, setIsConnectingShopify] = useState(false);
+  const [isDisconnectingStore, setIsDisconnectingStore] = useState<'woo' | 'shopify' | null>(null);
+  const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [isExtractingTone, setIsExtractingTone] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
@@ -39,6 +46,9 @@ export default function SettingsPage() {
     const tabQuery = params.get('tab');
     if (tabQuery && ['general', 'canales', 'tienda', 'suscripcion', 'equipo', 'avanzado'].includes(tabQuery)) {
       setActiveTab(tabQuery);
+    }
+    if (params.get('woo_connected') === '1') {
+      showToast('¡Tienda WooCommerce vinculada con éxito!');
     }
 
     fetchSettings();
@@ -69,8 +79,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.get('name'),
-          address: formData.get('address'),
-          businessHours: formData.get('businessHours')
+          address: formData.get('address')
         })
       });
       if (res.ok) {
@@ -82,6 +91,25 @@ export default function SettingsPage() {
     } catch (err) {
       setSaveState('idle');
       showToast('Error al guardar la información.');
+    }
+  };
+
+  const handleSaveBusinessHours = async (hoursJson: string) => {
+    try {
+      const parsed = JSON.parse(hoursJson);
+      const res = await fetch('/api/settings/general', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessHours: parsed })
+      });
+      if (res.ok) {
+        showToast('Horario comercial guardado correctamente.');
+        fetchSettings();
+      } else {
+        showToast('Error al guardar horario.');
+      }
+    } catch (err) {
+      showToast('Error de conexión al guardar horario.');
     }
   };
 
@@ -142,6 +170,40 @@ export default function SettingsPage() {
       showToast('Error desconectando el canal.');
     } finally {
       setIsDisconnecting(false);
+    }
+  };
+
+  const handleDisconnectStore = async (storeType: 'woo' | 'shopify') => {
+    setIsDisconnectingStore(storeType);
+    try {
+      const res = await fetch(`/api/settings/${storeType}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast(`${storeType === 'woo' ? 'WooCommerce' : 'Shopify'} desconectado correctamente.`);
+        fetchSettings();
+      } else {
+        showToast('Error al desconectar la tienda.');
+      }
+    } catch (e) {
+      showToast('Error al procesar la desconexión.');
+    } finally {
+      setIsDisconnectingStore(null);
+    }
+  };
+
+  const handleSyncCatalog = async () => {
+    setIsSyncingCatalog(true);
+    try {
+      const res = await fetch('/api/settings/catalog/sync', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(data.message || `Catálogo sincronizado (${data.productsCount} productos).`);
+      } else {
+        showToast(data.error || 'No se pudo sincronizar el catálogo.');
+      }
+    } catch (e) {
+      showToast('Error de conexión al sincronizar el catálogo.');
+    } finally {
+      setIsSyncingCatalog(false);
     }
   };
 
@@ -255,16 +317,10 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Horarios de atención al público</label>
-                <input 
-                  type="text" 
-                  name="businessHours"
-                  defaultValue={settings?.general?.businessHours || ''}
-                  placeholder="Ej: Lunes a Viernes de 9:00 a 20:00. Sábados de 10:00 a 14:00."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:ring-2 focus:ring-blue-600"
-                />
-              </div>
+              <BusinessHoursSettings 
+                initialHours={settings?.general?.businessHours} 
+                onSave={handleSaveBusinessHours} 
+              />
 
               {/* EXTRAER ESTILO DE COMUNICACIÓN CON IA */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
@@ -504,26 +560,139 @@ export default function SettingsPage() {
           <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-6">
             <div>
               <h2 className="text-base font-bold text-slate-900">Catálogo de productos y comercio</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Conecta tu tienda online para sincronizar productos, precios y stock en tiempo real</p>
+              <p className="text-xs text-slate-500 mt-0.5">Conecta tu tienda online para sincronizar productos, precios y stock en tiempo real, o gestiona encargos directos.</p>
             </div>
 
-            <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="space-y-1">
-                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-base">🛍️</span>
-                  WooCommerce / Tienda online
-                </span>
-                <p className="text-xs text-slate-500">
-                  Sincroniza tus productos para que la IA consulte disponibilidad y precios.
-                </p>
+            <div className="grid grid-cols-1 gap-4">
+              {/* WOOCOMMERCE */}
+              <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🛍️</span>
+                    <span className="text-xs font-bold text-slate-900">WooCommerce</span>
+                    {settings?.store?.wooConnected ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Conectado
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-semibold rounded-full">
+                        No conectado
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {settings?.store?.wooConnected && settings?.store?.wooUrl
+                      ? `Conectado a ${settings.store.wooUrl}. Los productos y precios se sincronizan con la IA.`
+                      : 'Sincroniza tus productos de WordPress/WooCommerce para consultas y pedidos en tiempo real.'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 self-end md:self-auto">
+                  {settings?.store?.wooConnected ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleSyncCatalog}
+                        disabled={isSyncingCatalog}
+                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isSyncingCatalog ? 'animate-spin' : ''}`} />
+                        {isSyncingCatalog ? 'Sincronizando...' : 'Sincronizar'}
+                      </button>
+                      <button
+                        onClick={() => handleDisconnectStore('woo')}
+                        disabled={isDisconnectingStore === 'woo'}
+                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {isDisconnectingStore === 'woo' ? 'Desconectando...' : 'Desconectar'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setShowWooModal(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
+                    >
+                      Conectar WooCommerce
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <button 
-                onClick={() => setShowWooModal(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
-              >
-                Conectar WooCommerce
-              </button>
+              {/* SHOPIFY */}
+              <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🟢</span>
+                    <span className="text-xs font-bold text-slate-900">Shopify</span>
+                    {settings?.store?.shopifyConnected ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Conectado
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-semibold rounded-full">
+                        No conectado
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {settings?.store?.shopifyConnected && settings?.store?.shopifyStoreDomain
+                      ? `Conectado a ${settings.store.shopifyStoreDomain}. Los pedidos se sincronizan en Shopify.`
+                      : 'Conecta tu tienda de Shopify mediante Access Token para sincronizar pedidos y catálogo.'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 self-end md:self-auto">
+                  {settings?.store?.shopifyConnected ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleSyncCatalog}
+                        disabled={isSyncingCatalog}
+                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isSyncingCatalog ? 'animate-spin' : ''}`} />
+                        {isSyncingCatalog ? 'Sincronizando...' : 'Sincronizar'}
+                      </button>
+                      <button
+                        onClick={() => handleDisconnectStore('shopify')}
+                        disabled={isDisconnectingStore === 'shopify'}
+                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {isDisconnectingStore === 'shopify' ? 'Desconectando...' : 'Desconectar'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setShowShopifyModal(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
+                    >
+                      Conectar Shopify
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ENCARGOS LOCALES / MANUALES */}
+              <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📦</span>
+                    <span className="text-xs font-bold text-slate-900">Encargos y pedidos locales</span>
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold rounded-full">
+                      Siempre activo
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Si tu negocio no cuenta con tienda online externa, la IA toma los pedidos por WhatsApp y los registra automáticamente en tu panel de Pedidos para entrega o recogida en tienda.
+                  </p>
+                </div>
+                <a
+                  href="/pedidos"
+                  className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+                >
+                  Ver panel de pedidos
+                </a>
+              </div>
             </div>
           </div>
         )}
@@ -675,55 +844,234 @@ export default function SettingsPage() {
         <Dialog open={showWooModal} onOpenChange={setShowWooModal}>
           <DialogContent className="max-w-md bg-white p-6 rounded-2xl border border-slate-200">
             <DialogHeader>
-              <DialogTitle className="text-base font-bold text-slate-900">Conectar tienda WooCommerce</DialogTitle>
-              <DialogDescription className="text-xs text-slate-500">Introduce la URL y las claves API de tu tienda WooCommerce para sincronización.</DialogDescription>
+              <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <ShoppingBag className="w-5 h-5 text-blue-600" />
+                Conectar tienda WooCommerce
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Vincula tu tienda de WordPress para que la IA consulte catálogo, precios y procese pedidos automáticamente.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 space-y-5">
+              {/* MÉTODO 1 CLIC (PRINCIPAL) */}
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const wooUrl = formData.get('wooUrlAuto') as string;
+
+                if (!wooUrl) {
+                  showToast('Introduce la URL de tu tienda WooCommerce.');
+                  return;
+                }
+
+                setIsConnectingWooAuto(true);
+                try {
+                  const res = await fetch('/api/onboarding/woo/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wooUrl, returnContext: 'settings' })
+                  });
+                  const data = await res.json();
+                  if (res.ok && data.authUrl) {
+                    window.location.href = data.authUrl;
+                  } else {
+                    showToast(data.error || 'Error al contactar con tu tienda WooCommerce.');
+                    setIsConnectingWooAuto(false);
+                  }
+                } catch (err) {
+                  showToast('Error de conexión con el servidor.');
+                  setIsConnectingWooAuto(false);
+                }
+              }} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Dirección web de tu tienda
+                  </label>
+                  <input 
+                    name="wooUrlAuto" 
+                    type="text" 
+                    placeholder="https://mitienda.com" 
+                    required 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all" 
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Solo introduce el dominio de tu tienda. Se abrirá la autorización segura de WordPress en 1 clic.
+                  </p>
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={isConnectingWooAuto}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs transition-colors disabled:opacity-50"
+                >
+                  <Zap className="w-4 h-4" />
+                  <span>{isConnectingWooAuto ? 'Conectando con tu tienda...' : 'Conectar en 1 clic con WooCommerce'}</span>
+                </button>
+              </form>
+
+              {/* MÉTODO MANUAL COLAPSABLE */}
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowManualWoo(!showManualWoo)}
+                  className="w-full flex items-center justify-between text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors py-1 cursor-pointer"
+                >
+                  <span>¿Prefieres configurar las claves API manualmente?</span>
+                  {showManualWoo ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+
+                {showManualWoo && (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    const wooUrl = formData.get('wooUrl') as string;
+                    const wooConsumerKey = formData.get('wooConsumerKey') as string;
+                    const wooConsumerSecret = formData.get('wooConsumerSecret') as string;
+
+                    if (!wooUrl || !wooConsumerKey || !wooConsumerSecret) {
+                      showToast('Por favor completa todos los campos de WooCommerce');
+                      return;
+                    }
+
+                    try {
+                      const res = await fetch('/api/onboarding/woo', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wooUrl, wooConsumerKey, wooConsumerSecret })
+                      });
+                      const data = await res.json();
+
+                      if (res.ok && data.success) {
+                        showToast('Tienda WooCommerce conectada correctamente');
+                        setShowWooModal(false);
+                        fetchSettings();
+                      } else {
+                        showToast(data.error || 'Error conectando la tienda');
+                      }
+                    } catch (err) {
+                      showToast('Error de conexión con la tienda');
+                    }
+                  }} className="mt-3 space-y-3 pt-3 border-t border-slate-100">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">URL de la tienda (HTTPS)</label>
+                      <input name="wooUrl" type="url" placeholder="https://mitienda.com" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Consumer Key (ck_...)</label>
+                      <input name="wooConsumerKey" type="text" placeholder="ck_xxxxxxxxxxxxxxxx" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Consumer Secret (cs_...)</label>
+                      <input name="wooConsumerSecret" type="password" placeholder="cs_xxxxxxxxxxxxxxxx" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                    </div>
+                    <div className="flex gap-2 justify-end pt-1">
+                      <button type="submit" className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs">
+                        Guardar claves manuales
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <button 
+                  type="button" 
+                  onClick={() => setShowWooModal(false)} 
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* MODAL SHOPIFY */}
+      {showShopifyModal && (
+        <Dialog open={showShopifyModal} onOpenChange={setShowShopifyModal}>
+          <DialogContent className="max-w-md bg-white p-6 rounded-2xl border border-slate-200">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold text-slate-900">Conectar tienda Shopify</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Introduce el dominio de tu tienda Shopify y el token de acceso de tu app personalizada de la API Admin.
+              </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={async (e) => {
               e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              const wooUrl = formData.get('wooUrl') as string;
-              const wooConsumerKey = formData.get('wooConsumerKey') as string;
-              const wooConsumerSecret = formData.get('wooConsumerSecret') as string;
+              if (isConnectingShopify) return;
+              setIsConnectingShopify(true);
 
-              if (!wooUrl || !wooConsumerKey || !wooConsumerSecret) {
-                showToast('Por favor completa todos los campos de WooCommerce');
+              const formData = new FormData(e.currentTarget);
+              const shopUrl = formData.get('shopUrl') as string;
+              const accessToken = formData.get('accessToken') as string;
+
+              if (!shopUrl || !accessToken) {
+                showToast('Por favor completa todos los campos de Shopify.');
+                setIsConnectingShopify(false);
                 return;
               }
 
               try {
-                const res = await fetch('/api/onboarding/woo', {
+                const res = await fetch('/api/settings/shopify', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ wooUrl, wooConsumerKey, wooConsumerSecret })
+                  body: JSON.stringify({ shopUrl, accessToken })
                 });
                 const data = await res.json();
 
                 if (res.ok && data.success) {
-                  showToast('Tienda WooCommerce conectada correctamente');
-                  setShowWooModal(false);
+                  showToast(`¡Shopify conectado con éxito para ${data.shop?.name || shopUrl}!`);
+                  setShowShopifyModal(false);
+                  fetchSettings();
                 } else {
-                  showToast(data.error || 'Error conectando la tienda');
+                  showToast(data.error || 'Error conectando con Shopify.');
                 }
               } catch (err) {
-                showToast('Error de conexión con la tienda');
+                showToast('Error de conexión con el servidor.');
+              } finally {
+                setIsConnectingShopify(false);
               }
             }} className="mt-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">URL de la tienda (HTTPS)</label>
-                <input name="wooUrl" type="url" placeholder="https://mitienda.com" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Dominio de la tienda (.myshopify.com)</label>
+                <input 
+                  name="shopUrl" 
+                  type="text" 
+                  placeholder="ejemplo-tienda.myshopify.com" 
+                  required 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" 
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Puedes introducir solo el nombre o la dirección completa .myshopify.com</p>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Consumer Key (ck_...)</label>
-                <input name="wooConsumerKey" type="text" placeholder="ck_xxxxxxxxxxxxxxxx" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Consumer Secret (cs_...)</label>
-                <input name="wooConsumerSecret" type="password" placeholder="cs_xxxxxxxxxxxxxxxx" required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" />
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Token de acceso API Admin (shpat_...)</label>
+                <input 
+                  name="accessToken" 
+                  type="password" 
+                  placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxx" 
+                  required 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-600" 
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Generado en Shopify Admin &gt; Configuración &gt; Apps desarrolladas para tu tienda.</p>
               </div>
               <div className="flex gap-2 justify-end pt-2">
-                <button type="button" onClick={() => setShowWooModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs">Conectar WooCommerce</button>
+                <button 
+                  type="button" 
+                  onClick={() => setShowShopifyModal(false)} 
+                  className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isConnectingShopify}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {isConnectingShopify ? 'Verificando...' : 'Conectar Shopify'}
+                </button>
               </div>
             </form>
           </DialogContent>
