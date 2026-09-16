@@ -165,9 +165,25 @@ const worker = new Worker(
 
         const knowledgeContext = similarChunks.map((c: any) => `[Fuente: ${c.sourcename || 'Desconocida'}]\n${c.content}`).join('\n\n');
 
+        const { getBusinessStatus } = require('./utils/businessHours');
+        const businessStatus = getBusinessStatus(commerce.businessHours);
+        let outOfHoursDirectives = '';
+        if (!businessStatus.isOpen && businessStatus.nextOpeningText) {
+          outOfHoursDirectives = `
+ESTADO ACTUAL DEL COMERCIO: CERRADO.
+Próxima apertura prevista: ${businessStatus.nextOpeningText}.
+INSTRUCCIONES PARA ATENCIÓN FUERA DE HORARIO:
+- Atiende con amabilidad cualquier consulta informativa sobre el catálogo o la tienda.
+- Si el cliente solicita realizar un encargo o pedido, infórmale con cortesía de que el local está cerrado pero que puedes dejar su pedido registrado para prepararlo tan pronto abran (${businessStatus.nextOpeningText}).
+- Indícale que, en caso de haber alguna incidencia de stock o disponibilidad, el equipo se pondrá en contacto con él al abrir.
+- Si el cliente acepta, toma los datos del encargo y confírmalo con normalidad.
+`;
+        }
+
         // Construimos un system prompt extendido garantizando Cero Alucinaciones
         const ragPrompt = `
 ${commerce.systemPrompt}
+${outOfHoursDirectives}
 
 INFORMACIÓN DE LA BASE DE CONOCIMIENTO (SOLO PUEDES USAR ESTA INFORMACIÓN):
 ${knowledgeContext || 'No hay información adicional disponible.'}
@@ -198,7 +214,7 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
           // 5. Llamamos a OpenAI inyectando el prompt enriquecido
           try {
             aiResponse = await Sentry.startSpan({ op: 'openai-response-generation', name: 'Generating LLM text' }, () =>
-              generateAIResponse({ ...commerce, systemPrompt: ragPrompt }, customerIdentifier, messageHistory)
+              generateAIResponse({ ...commerce, systemPrompt: ragPrompt }, customerIdentifier, messageHistory, session.id)
             );
 
             // Guardar en Semantic Cache
