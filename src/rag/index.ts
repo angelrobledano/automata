@@ -337,11 +337,17 @@ export async function ensureVectorIndexes(): Promise<void> {
       ON "DocumentChunk" USING hnsw (embedding vector_cosine_ops);
     `);
     await prisma.$executeRawUnsafe(`
-      CREATE INDEX IF NOT EXISTS semantic_cache_embedding_hnsw_idx 
+      CREATE INDEX IF NOT EXISTS semantic_cache_embedding_hnsw_idx
       ON "SemanticCache" USING hnsw (embedding vector_cosine_ops);
     `);
+    // B-30: GIN para la búsqueda BM25 (full-text español) — sin él, cada
+    // búsqueda híbrida recorre toda la tabla computando el tsvector.
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS document_chunk_content_fts_idx
+      ON "DocumentChunk" USING gin (to_tsvector('spanish', content));
+    `);
   } catch (err) {
-    console.warn('[RAG] Verificación de índices vectoriales HNSW finalizada (o no soportada):', err);
+    console.warn('[RAG] Verificación de índices vectoriales finalizada (o no soportada):', err);
   }
 }
 

@@ -7,18 +7,47 @@ on:
   push:
     branches:
       - develop
+      - main
 
 jobs:
   lint-build-test:
-    name: Lint, Build & Test
+    name: Lint, Build & Test (backend + dashboard)
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: ankane/pgvector:v0.5.1
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: automata_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/automata_test?schema=public"
+      DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/automata_test?schema=public"
       REDIS_URL: "redis://localhost:6379"
       OPENAI_API_KEY: "sk-fake-key-for-testing"
       ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef"
       JWT_SECRET: "ci-jwt-secret-testing"
+      META_APP_ID: "123456"
+      META_APP_SECRET: "ci-app-secret"
+      META_VERIFY_TOKEN: "ci-verify-token"
 
     steps:
       - name: 1. Checkout Código
@@ -46,21 +75,24 @@ jobs:
           npm ci
           cd dashboard && npm ci
 
-      - name: 5. Generar Cliente Prisma
+      - name: 5. Esquema de Base de Datos (db push contra Postgres de CI)
+        run: npx prisma db push --skip-generate --accept-data-loss
+
+      - name: 6. Generar Cliente Prisma
         run: npx prisma generate
 
-      - name: 6. Comprobación de Compilación y Tipos (Type Check)
+      - name: 7. Compilación y Types del Backend (tsc)
+        run: npx tsc --noEmit
+
+      - name: 8. Tests del Backend (unit + integration)
+        run: npx vitest run src/test
+
+      - name: 9. Build del Dashboard (type-check incluido)
         run: |
+          cd dashboard
           npm run build
-          cd dashboard && npm run build
 
-      - name: 7. Ejecución de Tests Unitarios e Integración
+      - name: 10. Tests del Dashboard
         run: |
-          cd dashboard && npm run test
-
-      - name: 8. Evaluación de IA & Guardrails (AI Eval Step)
-        run: |
-          echo "🤖 Ejecutando evaluación automatizada de Prompts, Filtro PII y Guardrails..."
-          # Placeholder para script de evaluación cuantitativa de LLMs (ej: Ragas, DeepEval o script interno)
-          # npm run eval:ai
-          echo "✅ Evaluación de IA completada con éxito. Sin desviaciones ni alucinaciones detectadas."
+          cd dashboard
+          npx vitest run

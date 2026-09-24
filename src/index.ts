@@ -7,6 +7,7 @@ import { verifyWebhook, receiveMessage } from './webhooks/meta';
 import billingRoutes from './billing/routes';
 import { verifyDashboardJwt } from './utils/jwt';
 import { resolveTargetRoom, roomForCommerce } from './utils/socket';
+import { ensureVectorIndexes } from './rag/index';
 
 dotenv.config();
 
@@ -59,6 +60,10 @@ app.use(express.json({
     (req as any).rawBody = buf;
   }
 }));
+
+// B-31: detrás de proxy/LB (Vercel, nginx) la IP real viene en X-Forwarded-For;
+// sin esto todos los clientes comparten un único cubo de rate limit.
+app.set('trust proxy', 1);
 
 // GLOBAL RATE LIMITER
 const limiter = rateLimit({
@@ -115,6 +120,8 @@ server.listen(port, () => {
   console.log(`[Server] Escuchando en http://localhost:${port}`);
   console.log(`[Server] Webhook de Meta configurado en /api/webhooks/meta`);
   console.log(`[Server] Socket.io con CORS restringido a: ${dashboardOrigin}`);
+  // B-30: garantizar índices vectoriales (HNSW) y de texto (GIN) en arranque.
+  ensureVectorIndexes().catch(err => console.warn('[Server] Índices vectoriales no verificados:', err));
 });
 
 // Graceful shutdown: cerrar servidor HTTP, sockets y conexión Redis antes de salir
