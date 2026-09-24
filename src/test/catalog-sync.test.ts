@@ -59,13 +59,14 @@ describe('CatalogSyncService', () => {
       );
 
       expect(products).toHaveLength(1);
-      expect(products[0].id).toBe(101);
-      expect(products[0].name).toBe('Tarta de Queso Artesanal');
-      expect(products[0].price).toBe(18.5);
-      expect(products[0].description).toBe('Tarta de queso para 8 personas.');
-      expect(products[0].category).toBe('Tartas');
-      expect(products[0].inStock).toBe(true);
-      expect(products[0].stockQuantity).toBe(5);
+      const wooProduct = products[0]!;
+      expect(wooProduct.id).toBe(101);
+      expect(wooProduct.name).toBe('Tarta de Queso Artesanal');
+      expect(wooProduct.price).toBe(18.5);
+      expect(wooProduct.description).toBe('Tarta de queso para 8 personas.');
+      expect(wooProduct.category).toBe('Tartas');
+      expect(wooProduct.inStock).toBe(true);
+      expect(wooProduct.stockQuantity).toBe(5);
     });
   });
 
@@ -92,12 +93,13 @@ describe('CatalogSyncService', () => {
       );
 
       expect(products).toHaveLength(1);
-      expect(products[0].id).toBe(202);
-      expect(products[0].name).toBe('Café de Especialidad Colombia');
-      expect(products[0].price).toBe(9.5);
-      expect(products[0].variants).toContain('250g en grano (9.50 €)');
-      expect(products[0].variants).toContain('250g molido (9.50 €)');
-      expect(products[0].inStock).toBe(true);
+      const shopifyProduct = products[0]!;
+      expect(shopifyProduct.id).toBe(202);
+      expect(shopifyProduct.name).toBe('Café de Especialidad Colombia');
+      expect(shopifyProduct.price).toBe(9.5);
+      expect(shopifyProduct.variants).toContain('250g en grano (9.50 €)');
+      expect(shopifyProduct.variants).toContain('250g molido (9.50 €)');
+      expect(shopifyProduct.inStock).toBe(true);
     });
   });
 

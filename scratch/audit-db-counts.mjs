@@ -39,7 +39,7 @@ async function main() {
   try {
     out.plans = await prisma.plan.findMany({ select: { name: true, monthlyPrice: true, status: true, providerPriceId: true } });
   } catch (e) { out.plans = `ERR: ${e.message.slice(0, 100)}`; }
-  console.log(JSON.stringify(out, null, 2));
+  console.log(JSON.stringify(out, (_, v) => (typeof v === 'bigint' ? Number(v) : v), 2));
 }
 
 main().catch(e => { console.error('FATAL:', e.message.slice(0, 300)); process.exit(1); }).finally(() => prisma.$disconnect());

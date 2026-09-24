@@ -6,15 +6,15 @@ export interface AppEnv {
   NODE_ENV: 'development' | 'production' | 'test';
   PORT: number;
   DATABASE_URL: string;
-  OPENAI_API_KEY?: string;
+  OPENAI_API_KEY?: string | undefined;
   LLM_PROVIDER: string;
   REDIS_URL: string;
   JWT_SECRET: string;
   ENCRYPTION_KEY: string;
-  META_APP_ID?: string;
-  META_APP_SECRET?: string;
-  META_WEBHOOK_VERIFY_TOKEN?: string;
-  WHATSAPP_TOKEN?: string;
+  META_APP_ID?: string | undefined;
+  META_APP_SECRET?: string | undefined;
+  META_WEBHOOK_VERIFY_TOKEN?: string | undefined;
+  WHATSAPP_TOKEN?: string | undefined;
 }
 
 const DEFAULT_DEV_JWT = 'super-secret-key-for-development';
