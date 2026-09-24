@@ -1,34 +1,30 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../src/db/prisma';
-import { cookies } from 'next/headers';
 import { verifyToken } from '../../../lib/jwt';
+import { readCookieValue } from '../../../../../src/utils/jwt';
 import { OrderStatus, OrderSource, DeliveryType } from '@prisma/client';
 import { decrypt } from '../../../../../src/utils/crypto';
 
 export const dynamic = 'force-dynamic';
 
-async function resolveCommerceId(request: Request): Promise<string> {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
-    if (token) {
-      const payload = await verifyToken(token);
-      if (payload?.commerceId) {
-        return payload.commerceId as string;
-      }
-    }
-  } catch (e) {
-    // Cookie store error
-  }
-
-  // Fallback to first available commerce in development / local
-  const first = await prisma.commerce.findFirst();
-  return first?.id || 'commerce-seed-id';
+/**
+ * B-06: el commerceId SOLO puede venir del JWT de sesión.
+ * Eliminado el fallback a `prisma.commerce.findFirst()` (permitía a un anónimo
+ * leer y escribir los pedidos del primer comercio de la BD).
+ */
+async function requireCommerceId(request: Request): Promise<string | null> {
+  const token = readCookieValue(request.headers.get('cookie'), 'token');
+  if (!token) return null;
+  const payload = await verifyToken(token);
+  return (payload?.commerceId as string) || null;
 }
 
 export async function GET(request: Request) {
   try {
-    const commerceId = await resolveCommerceId(request);
+    const commerceId = await requireCommerceId(request);
+    if (!commerceId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
     const url = new URL(request.url);
     const statusParam = url.searchParams.get('status');
     const sourceParam = url.searchParams.get('source');
@@ -86,7 +82,10 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const commerceId = await resolveCommerceId(request);
+    const commerceId = await requireCommerceId(request);
+    if (!commerceId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
     const body = await request.json();
     const { id, status, notes } = body;
 
@@ -168,7 +167,10 @@ export async function PATCH(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const commerceId = await resolveCommerceId(request);
+    const commerceId = await requireCommerceId(request);
+    if (!commerceId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
     const body = await request.json();
     const {
       customerName,
