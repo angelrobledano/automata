@@ -40,8 +40,10 @@ export class FeatureGuard {
     // 1. Get the active plan
     const activeSub = commerce.subscriptions[0];
     if (!activeSub) {
-      // Si el comercio está en periodo de prueba o activo pero sin suscripción formal aún
-      if (commerce.status === 'TRIAL' || commerce.status === 'ACTIVE' || commerce.subscriptionStatus === 'ACTIVE') {
+      // B-11: fail-closed. Antes se permitía todo si commerce.status === 'ACTIVE'
+      // (el valor por defecto del schema), lo que hacía el billing bypassable.
+      // Solo el flag explícito de trial permite consumo sin suscripción formal.
+      if (commerce.subscriptionStatus === 'TRIAL') {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No active subscription' };

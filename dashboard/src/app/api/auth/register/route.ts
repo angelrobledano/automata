@@ -49,13 +49,15 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Creamos Commerce (en trial activo de 14 días) y User a la vez
+    // Creamos Commerce (en trial de 14 días) y User a la vez.
+    // B-11: subscriptionStatus TRIAL (antes 'ACTIVE', que era un trial ilimitado
+    // encubierto y hacía bypass del FeatureGuard).
     const commerce = await prisma.commerce.create({
       data: {
         name,
         systemPrompt: `Eres el asistente virtual de ${name}. Ayudas a los clientes a resolver dudas y realizar pedidos.`,
         status: 'TRIAL',
-        subscriptionStatus: 'ACTIVE',
+        subscriptionStatus: 'TRIAL',
         onboardingCompleted: false,
         users: {
           create: {

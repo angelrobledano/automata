@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../../../src/db/prisma';
 import { verifyToken } from '@/lib/jwt';
-import { cookies } from 'next/headers';
+import { readCookieValue } from '../../../../../../../src/utils/jwt';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
+    const token = readCookieValue(request.headers.get('cookie'), 'token');
     if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
     const payload = await verifyToken(token);
@@ -32,6 +31,16 @@ export async function POST(request: Request) {
       new URL(cleanUrl);
     } catch {
       return NextResponse.json({ error: 'La dirección URL introducida no es válida' }, { status: 400 });
+    }
+
+    // B-08/SSRF-lite: bloquear hosts internos/privados (el backend hará fetch
+    // contra esta URL en el sync de catálogo y al verificar la tienda).
+    const parsedUrl = new URL(cleanUrl);
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const blockedHosts = ['localhost', '127.0.0.1', '0.0.0.0', '::1', 'metadata.google.internal'];
+    const privateIp = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.)/.test(hostname);
+    if (blockedHosts.includes(hostname) || privateIp || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+      return NextResponse.json({ error: 'La dirección de la tienda no es válida' }, { status: 400 });
     }
 
     const currentCommerce = await prisma.commerce.findUnique({

@@ -57,19 +57,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ url: session.url });
     }
 
-    // Modo Desarrollo / Demo: activar suscripción directamente
-    await prisma.commerce.update({
-      where: { id: commerceId },
-      data: {
-        subscriptionStatus: 'ACTIVE',
-        isLifetimeFree: true
-      }
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      url: '/ajustes/billing?success=true' 
-    });
+    // B-11: sin Stripe configurado NO se activa nada (antes otorgaba
+    // isLifetimeFree=true: SaaS gratis ilimitado por un bug de configuración).
+    // Fail-closed con mensaje accionable para el operador.
+    console.error('[Billing] STRIPE_SECRET_KEY no configurada: no se puede iniciar el checkout.');
+    return NextResponse.json(
+      { error: 'El sistema de pagos no está disponible ahora mismo. Contacta con soporte.' },
+      { status: 503 }
+    );
   } catch (error: any) {
     console.error('Error creating checkout session:', error);
     return NextResponse.json({ error: 'Error al procesar checkout' }, { status: 500 });

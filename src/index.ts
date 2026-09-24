@@ -52,7 +52,13 @@ io.on('connection', (socket) => {
 
 import rateLimit from 'express-rate-limit';
 
-app.use(express.json());
+// B-09: capturar el body EXACTO (bytes) para validar la firma HMAC de Meta.
+// La firma se calcula sobre el body crudo; re-serializar JSON puede no coincidir.
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    (req as any).rawBody = buf;
+  }
+}));
 
 // GLOBAL RATE LIMITER
 const limiter = rateLimit({

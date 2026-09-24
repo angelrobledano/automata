@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { exchangeCodeForTokens } from '../../../../../../src/integrations/meta/oauth';
-import { cookies } from 'next/headers';
+import { exchangeCodeForTokens, verifySignedOAuthState } from '../../../../../../src/integrations/meta/oauth';
+import { readCookieValue } from '../../../../../../src/utils/jwt';
 import { verifyToken } from '@/lib/jwt';
 
 export async function GET(request: Request) {
@@ -19,41 +19,49 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL('/ajustes?tab=canales&integration_error=missing_code', request.url));
     }
 
-    // 1. Obtener commerceId desde la cookie JWT del usuario autenticado
-    let commerceId = 'commerce-seed-id';
+    // 1. Identidad: state firmado (fuente de verdad) + cookie JWT como respaldo.
+    let commerceId: string | null = null;
+    let userId: string | null = null;
     let isEmbedded = false;
 
-    try {
-      const cookieStore = await cookies();
-      const jwtToken = cookieStore.get('token')?.value;
-      if (jwtToken) {
-        const jwtPayload = await verifyToken(jwtToken);
-        if (jwtPayload && jwtPayload.commerceId) {
-          commerceId = jwtPayload.commerceId as string;
-        }
+    if (state) {
+      // B-08: el state DEBE estar firmado con HMAC. Un state no firmado se rechaza
+      // (antes era base64 plano: mis-binding a cualquier commerceId).
+      const verified = verifySignedOAuthState(state);
+      if (!verified) {
+        console.error('[Security] state de OAuth Meta no firmado o inválido — callback rechazado.');
+        return NextResponse.redirect(new URL('/ajustes?tab=canales&integration_error=invalid_state', request.url));
       }
-    } catch (e) {
-      console.warn('No se pudo verificar cookie JWT en callback:', e);
+      commerceId = verified.commerceId;
+      userId = verified.userId;
+      isEmbedded = verified.embedded;
     }
 
-    // 2. Decodificar el state de Meta si viene
-    if (state) {
+    if (!commerceId) {
+      // Compatibilidad: flujos sin state usan la cookie del propio navegador
       try {
-        const decodedState = Buffer.from(state, 'base64').toString('utf8');
-        const parsed = JSON.parse(decodedState);
-        if (parsed.commerceId) commerceId = parsed.commerceId;
-        if (parsed.embedded) isEmbedded = true;
+        const jwtToken = readCookieValue(request.headers.get('cookie'), 'token');
+        if (jwtToken) {
+          const jwtPayload = await verifyToken(jwtToken);
+          if (jwtPayload?.commerceId) {
+            commerceId = jwtPayload.commerceId as string;
+            userId = (jwtPayload.userId as string) || null;
+          }
+        }
       } catch (e) {
-        console.warn('Error decodificando state:', e);
+        console.warn('No se pudo verificar cookie JWT en callback:', e);
       }
+    }
+
+    if (!commerceId) {
+      return NextResponse.redirect(new URL('/ajustes?tab=canales&integration_error=no_identity', request.url));
     }
 
     const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
     const hostOrigin = url.origin;
-    const userId = 'SYSTEM_ADMIN';
 
-    // 3. Realizar el intercambio de tokens de forma segura
-    await exchangeCodeForTokens(code, commerceId, userId, ip, hostOrigin);
+    // 2. Realizar el intercambio de tokens de forma segura
+    await exchangeCodeForTokens(code, commerceId, userId || 'unknown', ip, hostOrigin);
 
     // 4. Si el flujo fue modal/embedded, cerrar el popup y recargar la ventana principal
     if (isEmbedded) {

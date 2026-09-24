@@ -1,24 +1,59 @@
 import { prisma } from '../../db/prisma';
 import { encrypt } from '../../utils/crypto';
+import crypto from 'crypto';
 
 export function getMetaAppCredentials(hostOrigin?: string) {
-  const appId = process.env.META_APP_ID || process.env.META_CLIENT_ID || process.env.NEXT_PUBLIC_META_APP_ID || '2815161522203005';
-  const appSecret = process.env.META_APP_SECRET || 'af9c518e052743e06fd7ee4089db9397';
+  // B-10: fail-closed — sin secretos en env, la función lanza en lugar de usar
+  // credenciales hardcodeadas (publicadas en el histórico del repo).
+  const appId = process.env.META_APP_ID || process.env.META_CLIENT_ID || process.env.NEXT_PUBLIC_META_APP_ID;
+  const appSecret = process.env.META_APP_SECRET;
 
-  if (process.env.NODE_ENV === 'production' && (!process.env.META_APP_ID || !process.env.META_APP_SECRET)) {
-    console.warn('[SECURITY WARNING] META_APP_ID o META_APP_SECRET no están configuradas en las variables de entorno de producción!');
+  if (!appId || !appSecret) {
+    throw new Error('META_APP_ID y META_APP_SECRET deben estar configurados en las variables de entorno');
   }
-  
+
   let baseUrl = hostOrigin || process.env.NEXT_PUBLIC_API_URL || 'https://automata-pied.vercel.app';
   if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
     baseUrl = `https://${baseUrl}`;
   }
-  
+
   const redirectUri = `${baseUrl}/api/meta/callback`;
   return { appId, appSecret, redirectUri };
 }
 
-export function getMetaLoginUrl(commerceId: string, hostOrigin?: string) {
+/**
+ * B-08: state de OAuth firmado con HMAC (JWT_SECRET). El callback verifica la
+ * firma antes de aceptar el commerceId — antes era base64 plano y cualquiera
+ * podía vincular una conexión Meta al comercio que quisiera (mis-binding).
+ */
+function signStateValue(value: string): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET debe estar configurado para firmar el state de OAuth');
+  return crypto.createHmac('sha256', secret).update(value).digest('base64url');
+}
+
+export function buildSignedOAuthState(commerceId: string, userId: string, embedded = false): string {
+  const payload = JSON.stringify({ commerceId, userId, embedded });
+  const sig = signStateValue(payload);
+  return Buffer.from(JSON.stringify({ commerceId, userId, embedded, sig })).toString('base64url');
+}
+
+export function verifySignedOAuthState(state: string): { commerceId: string; userId: string; embedded: boolean } | null {
+  try {
+    const decoded = JSON.parse(Buffer.from(state, 'base64url').toString('utf8'));
+    const { commerceId, userId, embedded, sig } = decoded;
+    if (!commerceId || !userId || !sig) return null;
+    const expected = signStateValue(JSON.stringify({ commerceId, userId, embedded: Boolean(embedded) }));
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+    return { commerceId, userId, embedded: Boolean(embedded) };
+  } catch {
+    return null;
+  }
+}
+
+export function getMetaLoginUrl(commerceId: string, hostOrigin?: string, userId: string = '') {
   const { appId, redirectUri } = getMetaAppCredentials(hostOrigin);
 
   const scopes = [
@@ -28,8 +63,7 @@ export function getMetaLoginUrl(commerceId: string, hostOrigin?: string) {
     'pages_messaging'
   ];
 
-  const state = JSON.stringify({ commerceId });
-  const encodedState = Buffer.from(state).toString('base64');
+  const encodedState = buildSignedOAuthState(commerceId, userId);
 
   return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodedState}&scope=${scopes.join(',')}&response_type=code`;
 }

@@ -14,10 +14,11 @@ export async function GET(request: Request) {
     if (!payload || !payload.commerceId) return new NextResponse('Unauthorized', { status: 401 });
 
     const commerceId = payload.commerceId as string;
+    const userId = (payload.userId as string) || '';
     const reqUrl = new URL(request.url);
     const hostOrigin = reqUrl.origin;
 
-    const authUrl = getMetaLoginUrl(commerceId, hostOrigin);
+    const authUrl = getMetaLoginUrl(commerceId, hostOrigin, userId);
     
     return NextResponse.redirect(authUrl);
   } catch (error) {

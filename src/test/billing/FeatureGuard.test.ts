@@ -40,6 +40,31 @@ describe('FeatureGuard', () => {
     expect(result.reason).toBe('No active subscription');
   });
 
+  it('B-11: should DENY when status is ACTIVE but there is no subscription (bypass cerrado)', async () => {
+    (prisma.commerce.findUnique as any).mockResolvedValue({
+      id: 'com_123',
+      status: 'ACTIVE',
+      subscriptionStatus: 'INACTIVE',
+      isLifetimeFree: false,
+      subscriptions: []
+    });
+    const result = await FeatureGuard.canExecute('com_123', 'conversations');
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toBe('No active subscription');
+  });
+
+  it('B-11: should ALLOW during explicit TRIAL subscriptionStatus without formal subscription', async () => {
+    (prisma.commerce.findUnique as any).mockResolvedValue({
+      id: 'com_123',
+      status: 'TRIAL',
+      subscriptionStatus: 'TRIAL',
+      isLifetimeFree: false,
+      subscriptions: []
+    });
+    const result = await FeatureGuard.canExecute('com_123', 'conversations');
+    expect(result.allowed).toBe(true);
+  });
+
   it('should allow execution if feature is UNLIMITED', async () => {
     (prisma.commerce.findUnique as any).mockResolvedValue({
       id: 'com_123',
