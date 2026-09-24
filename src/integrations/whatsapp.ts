@@ -35,6 +35,9 @@ export async function sendWhatsAppMessage(phoneNumberId: string, token: string, 
     console.log(`[WhatsApp] Mensaje de texto enviado a ${to}`);
   } catch (error: any) {
     console.error(`[WhatsApp] Error enviando mensaje a ${to}:`, error.response?.data || error.message);
+    // Relanzar: el worker debe saber que el cliente NO recibió el mensaje
+    // para reintentar (BullMQ) y, en último caso, escalar a humano.
+    throw error;
   }
 }
 
@@ -61,9 +64,13 @@ export async function sendWhatsAppFormattedMessage(phoneNumberId: string, token:
     // Fallback: si el mensaje interactivo falla (ej: cuenta no verificada), enviar como texto plano
     if (formatted.buttons.length > 0) {
       console.warn(`[WhatsApp] Fallback a texto plano para ${to} (error en interactivo):`, error.response?.data?.error?.message || error.message);
+      // Si el fallback también falla, el error se propaga (el cliente no recibió nada)
       await sendWhatsAppMessage(phoneNumberId, token, to, formatted.text);
     } else {
       console.error(`[WhatsApp] Error enviando mensaje a ${to}:`, error.response?.data || error.message);
+      // Relanzar: el worker debe saber que el cliente NO recibió el mensaje
+      // para reintentar (BullMQ) y, en último caso, escalar a humano.
+      throw error;
     }
   }
 }
