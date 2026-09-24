@@ -64,26 +64,47 @@ export default function OrdersPage() {
 
   useEffect(() => {
     setSoundMuted(isSoundMuted());
-    
-    const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001');
-    
-    socket.on('new_order', (data: any) => {
-      if (data?.order) {
-        playOrderChime();
-        setOrders(prev => {
-          if (prev.some(o => o.id === data.order.id)) return prev;
-          return [data.order, ...prev];
+
+    let socket: any = null;
+    let cancelled = false;
+
+    // B-05: el socket exige JWT en el handshake (auth.token). Sin sesión
+    // válida no se conecta y la página sigue funcionando por fetch manual.
+    const initSocket = async () => {
+      try {
+        const res = await fetch('/api/auth/token', { cache: 'no-store' });
+        if (!res.ok) return;
+        const { token } = await res.json();
+        if (cancelled || !token) return;
+
+        socket = io(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001', {
+          auth: { token }
         });
-        setStats(prev => ({
-          ...prev,
-          total: prev.total + 1,
-          pending: prev.pending + 1
-        }));
+
+        socket.on('new_order', (data: any) => {
+          if (data?.order) {
+            playOrderChime();
+            setOrders(prev => {
+              if (prev.some(o => o.id === data.order.id)) return prev;
+              return [data.order, ...prev];
+            });
+            setStats(prev => ({
+              ...prev,
+              total: prev.total + 1,
+              pending: prev.pending + 1
+            }));
+          }
+        });
+      } catch {
+        // Sin socket en vivo; el fetch manual sigue siendo la fuente de verdad
       }
-    });
+    };
+
+    initSocket();
 
     return () => {
-      socket.disconnect();
+      cancelled = true;
+      if (socket) socket.disconnect();
     };
   }, []);
 

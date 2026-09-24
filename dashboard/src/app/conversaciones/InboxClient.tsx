@@ -130,28 +130,40 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || (isLocalhost ? 'http://localhost:3001' : null);
 
     let socket: any = null;
+    let cancelled = false;
 
     if (socketUrl) {
       try {
-        socket = io(socketUrl, {
-          autoConnect: true,
-          reconnection: true,
-          transports: ['websocket', 'polling']
-        });
+        // B-05: el socket exige JWT en el handshake (cookie httpOnly → la
+        // obtenemos de /api/auth/token). Sin token, no se conecta y el inbox
+        // sigue funcionando por polling.
+        const initSocket = async () => {
+          try {
+            const res = await fetch('/api/auth/token', { cache: 'no-store' });
+            if (!res.ok) return;
+            const { token } = await res.json();
+            if (cancelled || !token) return;
 
-        socket.on('connect', () => {
-          isSocketActive = true;
-        });
+            socket = io(socketUrl, {
+              autoConnect: true,
+              reconnection: true,
+              transports: ['websocket', 'polling'],
+              auth: { token }
+            });
 
-        socket.on('disconnect', () => {
-          isSocketActive = false;
-        });
+            socket.on('connect', () => {
+              isSocketActive = true;
+            });
 
-        socket.on('connect_error', () => {
-          isSocketActive = false;
-        });
+            socket.on('disconnect', () => {
+              isSocketActive = false;
+            });
 
-        socket.on('new_message', (data: any) => {
+            socket.on('connect_error', () => {
+              isSocketActive = false;
+            });
+
+            socket.on('new_message', (data: any) => {
           setSessions(prev => {
             const updated = [...prev];
             const sessionIndex = updated.findIndex(s => s.id === data.sessionId);
@@ -176,7 +188,13 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
               return prev;
             }
           });
-        });
+            });
+          } catch (err) {
+            isSocketActive = false;
+          }
+        };
+
+        initSocket();
       } catch (err) {
         isSocketActive = false;
       }

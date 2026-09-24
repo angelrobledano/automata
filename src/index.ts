@@ -5,6 +5,8 @@ import { Server } from 'socket.io';
 import IORedis from 'ioredis';
 import { verifyWebhook, receiveMessage } from './webhooks/meta';
 import billingRoutes from './billing/routes';
+import { verifyDashboardJwt } from './utils/jwt';
+import { resolveTargetRoom, roomForCommerce } from './utils/socket';
 
 dotenv.config();
 
@@ -12,12 +14,40 @@ const app = express();
 const port = process.env.PORT || 3001;
 const server = http.createServer(app);
 
+// CORS: solo el dashboard de confianza puede abrir el socket.
+// En producción, definir DASHBOARD_URL (ej. https://automata-pied.vercel.app).
+const dashboardOrigin = process.env.DASHBOARD_URL || 'http://localhost:3000';
+
 // CORS for Next.js dashboard
 const io = new Server(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: dashboardOrigin,
+    methods: ['GET', 'POST'],
+    credentials: true
   }
+});
+
+// B-05: autenticación en el handshake — sin JWT válido del dashboard no hay socket.
+io.use(async (socket, next) => {
+  const token = socket.handshake.auth?.token;
+  const payload = await verifyDashboardJwt(token);
+  if (!payload?.commerceId) {
+    next(new Error('unauthorized'));
+    return;
+  }
+  socket.data.commerceId = payload.commerceId;
+  socket.data.role = payload.role;
+  next();
+});
+
+// Cada socket solo escucha los eventos de su propio comercio
+io.on('connection', (socket) => {
+  const commerceId = socket.data.commerceId as string;
+  socket.join(roomForCommerce(commerceId));
+  console.log(`[Socket.io] Cliente conectado al comercio ${commerceId}:`, socket.id);
+  socket.on('disconnect', () => {
+    console.log('[Socket.io] Cliente desconectado:', socket.id);
+  });
 });
 
 import rateLimit from 'express-rate-limit';
@@ -57,27 +87,28 @@ redisSub.subscribe('chat_updates', 'order_events', (err, count) => {
 redisSub.on('message', (channel, message) => {
   try {
     const data = JSON.parse(message);
+    // B-05: solo se retransmite a la sala del comercio propietario.
+    // Si el evento no lleva commerceId, se descarta (nunca broadcast global).
+    const room = resolveTargetRoom(channel, data);
+    if (!room) {
+      console.warn(`[Socket.io] Evento sin commerceId en canal ${channel}, descartado.`);
+      return;
+    }
     if (channel === 'chat_updates') {
-      io.emit('new_message', data);
+      io.to(room).emit('new_message', data);
     } else if (channel === 'order_events') {
-      console.log('[Socket.io] Retransmitiendo new_order:', data.order?.id);
-      io.emit('new_order', data);
+      console.log(`[Socket.io] Retransmitiendo new_order a ${room}:`, data.order?.id);
+      io.to(room).emit('new_order', data);
     }
   } catch (e) {
     console.error('[Socket.io] Error parseando mensaje de Redis:', e);
   }
 });
 
-io.on('connection', (socket) => {
-  console.log('[Socket.io] Nuevo cliente conectado:', socket.id);
-  socket.on('disconnect', () => {
-    console.log('[Socket.io] Cliente desconectado:', socket.id);
-  });
-});
-
 server.listen(port, () => {
   console.log(`[Server] Escuchando en http://localhost:${port}`);
   console.log(`[Server] Webhook de Meta configurado en /api/webhooks/meta`);
+  console.log(`[Server] Socket.io con CORS restringido a: ${dashboardOrigin}`);
 });
 
 // Graceful shutdown: cerrar servidor HTTP, sockets y conexión Redis antes de salir

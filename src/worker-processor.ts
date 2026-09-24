@@ -27,6 +27,7 @@ export async function processMetaJob(job: Job, connection: IORedis) {
 
   const { channel, receiverId, senderId, text, originalPayload } = payload;
   let session: any = null;
+  let commerceId = ''; // necesario para publicar eventos con sala correcta incluso en el catch
 
   return Sentry.startSpan({
     op: "process-message",
@@ -71,6 +72,7 @@ export async function processMetaJob(job: Job, connection: IORedis) {
         return;
       }
       const commerce = channelConnection.commerce;
+      commerceId = commerce.id;
       Sentry.setTag("commerceId", commerce.id);
 
       const customerIdentifier = senderId;
@@ -83,7 +85,7 @@ export async function processMetaJob(job: Job, connection: IORedis) {
       // 2. Guardamos el mensaje del usuario (SOLO en el primer intento para evitar duplicados en reintentos)
       if (job.attemptsMade === 0) {
         await addMessageToSession(session.id, 'user', cleanText);
-        connection.publish('chat_updates', JSON.stringify({ sessionId: session.id, message: { role: 'user', content: cleanText, createdAt: new Date().toISOString() } }));
+        connection.publish('chat_updates', JSON.stringify({ commerceId, sessionId: session.id, message: { role: 'user', content: cleanText, createdAt: new Date().toISOString() } }));
       }
 
       // 2b. DETECCIÓN DE SOLICITUD EXPLÍCITA DE ATENCIÓN HUMANA
@@ -234,7 +236,7 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
 
       // 6. Guardamos la respuesta generada solo si se entregó con éxito
       await addMessageToSession(session.id, 'assistant', aiResponse);
-      connection.publish('chat_updates', JSON.stringify({ sessionId: session.id, message: { role: 'assistant', content: aiResponse, createdAt: new Date().toISOString() } }));
+      connection.publish('chat_updates', JSON.stringify({ commerceId, sessionId: session.id, message: { role: 'assistant', content: aiResponse, createdAt: new Date().toISOString() } }));
 
       // 7. Descontar del presupuesto mediante FeatureGuard
       const estimatedTokens = Math.floor((ragPrompt.length + aiResponse.length) / 4);
@@ -262,7 +264,9 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
         const systemMessage = "⚠️ Error crítico de conexión con IA. Asistencia humana requerida. El cliente no ha recibido respuesta.";
         if (session) {
           await addMessageToSession(session.id, 'system', systemMessage);
-          connection.publish('chat_updates', JSON.stringify({ sessionId: session.id, message: { role: 'system', content: systemMessage, createdAt: new Date().toISOString() } }));
+          if (commerceId) {
+            connection.publish('chat_updates', JSON.stringify({ commerceId, sessionId: session.id, message: { role: 'system', content: systemMessage, createdAt: new Date().toISOString() } }));
+          }
         }
 
         throw new Error('Fallo absoluto de IA tras reintentos. Sesión escalada a humano.');
