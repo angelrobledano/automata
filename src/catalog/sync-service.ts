@@ -29,19 +29,25 @@ export class CatalogSyncService {
    */
   static async fetchWooProducts(wooUrl: string, consumerKey: string, consumerSecret: string): Promise<CatalogProduct[]> {
     const cleanUrl = wooUrl.replace(/\/+$/, '');
-    const endpoint = `${cleanUrl}/wp-json/wc/v3/products?per_page=100&status=publish`;
     const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
 
-    const response = await axios.get(endpoint, {
-      headers: { 'Authorization': `Basic ${auth}` },
-      timeout: 15000
-    });
+    // B-22: paginación real (antes: solo la primera página de 100 productos;
+    // catálogos grandes quedaban truncados indefinidamente).
+    const perPage = 100;
+    const maxPages = 10; // cota de seguridad: 1000 productos por sync
+    const rawProducts: any[] = [];
 
-    if (!Array.isArray(response.data)) {
-      return [];
+    for (let page = 1; page <= maxPages; page++) {
+      const response = await axios.get(
+        `${cleanUrl}/wp-json/wc/v3/products?per_page=${perPage}&page=${page}&status=publish`,
+        { headers: { 'Authorization': `Basic ${auth}` }, timeout: 15000 }
+      );
+      const batch = Array.isArray(response.data) ? response.data : [];
+      rawProducts.push(...batch);
+      if (batch.length < perPage) break;
     }
 
-    return response.data.map((p: any) => {
+    return rawProducts.map((p: any) => {
       const price = parseFloat(p.price || p.regular_price || '0') || 0;
       const cats = Array.isArray(p.categories) ? p.categories.map((c: any) => c.name).join(', ') : undefined;
       const inStock = p.stock_status === 'instock' || (typeof p.stock_quantity === 'number' && p.stock_quantity > 0);
@@ -63,19 +69,26 @@ export class CatalogSyncService {
    */
   static async fetchShopifyProducts(shopUrl: string, accessToken: string): Promise<CatalogProduct[]> {
     const cleanShop = shopUrl.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
-    const endpoint = `https://${cleanShop}/admin/api/2024-01/products.json?limit=100&status=active`;
+    const headers = {
+      'X-Shopify-Access-Token': accessToken,
+      'Content-Type': 'application/json'
+    };
 
-    const response = await axios.get(endpoint, {
-      headers: {
-        'X-Shopify-Access-Token': accessToken,
-        'Content-Type': 'application/json'
-      },
-      timeout: 15000
-    });
+    // B-22: paginación por cursor (header Link) — antes solo 100 productos.
+    const rawProducts: any[] = [];
+    let endpoint: string | null = `https://${cleanShop}/admin/api/2024-01/products.json?limit=250&status=active`;
+    let page = 0;
+    const maxPages = 10; // cota de seguridad
 
-    const rawProducts = response.data?.products;
-    if (!Array.isArray(rawProducts)) {
-      return [];
+    while (endpoint && page < maxPages) {
+      const response: any = await axios.get(endpoint, { headers, timeout: 15000 });
+      const batch = response.data?.products;
+      if (!Array.isArray(batch)) break;
+      rawProducts.push(...batch);
+      const linkHeader: string | undefined = response.headers?.link;
+      const nextMatch: RegExpMatchArray | null = linkHeader?.match(/<([^>]+)>;\s*rel="next"/) || null;
+      endpoint = nextMatch ? nextMatch[1]! : null;
+      page++;
     }
 
     return rawProducts.map((p: any) => {

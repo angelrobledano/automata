@@ -125,7 +125,13 @@ beforeEach(() => {
   } as any);
 
   mockedGetMessages.mockResolvedValue([]);
-  mockedGenerate.mockResolvedValue('Respuesta de la IA');
+  mockedGenerate.mockResolvedValue({
+    response: 'Respuesta de la IA',
+    usage: {
+      promptTokens: 100, completionTokens: 50, totalTokens: 150,
+      estimatedCostUsd: 0.0001, latencyMs: 420, model: 'gpt-4o-mini',
+    },
+  });
   mockedCanExecute.mockResolvedValue({ allowed: true } as any);
   mockedQueryRaw.mockResolvedValue([] as any); // cache miss
 });

@@ -16,8 +16,7 @@ export async function generateAIResponse(
   customerPhone: string,
   messageHistory: { role: 'user' | 'assistant' | 'system', content: string | null }[],
   sessionId?: string
-) {
-  const lastUserMsg = [...messageHistory].reverse().find(m => m.role === 'user')?.content || '';
+) {  const lastUserMsg = [...messageHistory].reverse().find(m => m.role === 'user')?.content || '';
 
   try {
     // 1. Knowledge Data Layer: Determinación determinista de hechos vigentes

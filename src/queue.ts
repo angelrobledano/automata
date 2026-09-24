@@ -28,6 +28,24 @@ export const enqueueMetaMessage = async (payload: any) => {
 
 export const documentQueue = new Queue('document-processing', { connection: connection as any });
 
+// B-22/B-17: colas de mantenimiento diario (catálogo + tokens Meta)
+export const catalogSyncQueue = new Queue('maintenance-catalog-sync', { connection: connection as any });
+export const metaTokenRefreshQueue = new Queue('maintenance-meta-token-refresh', { connection: connection as any });
+
+export async function scheduleDailyJobs(): Promise<void> {
+  await catalogSyncQueue.add(
+    'sync-all',
+    {},
+    { repeat: { pattern: '0 4 * * *' }, removeOnComplete: { age: 7 * 24 * 3600 }, removeOnFail: { age: 7 * 24 * 3600 } }
+  );
+  await metaTokenRefreshQueue.add(
+    'refresh-tokens',
+    {},
+    { repeat: { pattern: '0 5 * * *' }, removeOnComplete: { age: 7 * 24 * 3600 }, removeOnFail: { age: 7 * 24 * 3600 } }
+  );
+  console.log('[Queue] Trabajos diarios programados: catalog-sync (04:00), meta-token-refresh (05:00)');
+}
+
 export const enqueueDocument = async (payload: { commerceId: string, filename: string, fileBuffer: string, category: string }) => {
   await documentQueue.add('process-document', payload, {
     attempts: 2,

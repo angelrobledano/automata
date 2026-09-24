@@ -85,7 +85,7 @@ export async function POST(req: Request) {
 
     // 6. RESPONSE GENERATION & QUALITY LAYER
     const messageHistory = session.messages.map(m => ({ role: m.role, content: m.content }));
-    const finalReply = await generateValidatedResponse({
+    const generation = await generateValidatedResponse({
       commerceId,
       sessionId: session.id,
       userQuestion: message,
@@ -96,10 +96,12 @@ export async function POST(req: Request) {
       aiModel: commerce.aiModel || 'gpt-4o-mini',
       temperature: commerce.aiTemperature || 0.2
     });
+    const finalReply = generation.response;
 
-    const latencyMs = Date.now() - startTime;
-    const tokensUsed = Math.round(finalReply.length * 1.3);
-    const estimatedCost = tokensUsed * 0.0000003;
+    const latencyMs = generation.usage.latencyMs || (Date.now() - startTime);
+    // B-21: uso REAL de tokens (antes: estimación por longitud)
+    const tokensUsed = generation.usage.totalTokens;
+    const estimatedCost = generation.usage.estimatedCostUsd;
 
     // 7. Guardar el mensaje devuelto en sesión
     await prisma.message.create({
@@ -108,8 +110,8 @@ export async function POST(req: Request) {
         role: 'assistant',
         content: finalReply,
         tokensUsed,
+        estimatedCost,
         latencyMs,
-        estimatedCost
       }
     });
 

@@ -44,12 +44,21 @@ export async function getSessionMessages(sessionId: string) {
   });
 }
 
-export async function addMessageToSession(sessionId: string, role: 'user' | 'assistant' | 'system', content: string) {
+export async function addMessageToSession(
+  sessionId: string,
+  role: 'user' | 'assistant' | 'system',
+  content: string,
+  meta?: { tokensUsed?: number; estimatedCost?: number; latencyMs?: number }
+) {
   return prisma.message.create({
     data: {
       sessionId,
       role,
       content,
+      // B-21: métricas reales de IA por mensaje (antes nunca se poblaban)
+      tokensUsed: meta?.tokensUsed ?? null,
+      estimatedCost: meta?.estimatedCost ?? null,
+      latencyMs: meta?.latencyMs ?? null,
     },
   });
 }

@@ -174,6 +174,28 @@ export function validateTakeOrderArgs(args: unknown): { ok: true; value: {
 /**
  * 2. FLUJO COMPLETO CON AUTO-REGENERACIÓN Y AUDITORÍA INMUTABLE
  */
+export interface GenerationUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  latencyMs: number;
+  model: string;
+}
+
+/** Coste aproximado por 1M tokens (USD). Revisar cuando se cambie de modelo. */
+const MODEL_PRICING: Array<{ match: string; input: number; output: number }> = [
+  { match: 'gpt-4o-mini', input: 0.15, output: 0.6 },
+  { match: 'gpt-4o', input: 2.5, output: 10 },
+  { match: 'gpt-4.1-mini', input: 0.4, output: 1.6 },
+  { match: 'gpt-4.1', input: 2, output: 8 },
+];
+
+function estimateCostUsd(model: string, promptTokens: number, completionTokens: number): number {
+  const pricing = MODEL_PRICING.find(p => model.includes(p.match)) || MODEL_PRICING[0]!;
+  return (promptTokens * pricing.input + completionTokens * pricing.output) / 1_000_000;
+}
+
 export async function generateValidatedResponse(params: {
   commerceId: string;
   sessionId?: string | null;
@@ -185,7 +207,7 @@ export async function generateValidatedResponse(params: {
   ragChunks: any[];
   aiModel?: string;
   temperature?: number;
-}): Promise<string> {
+}): Promise<{ response: string; usage: GenerationUsage }> {
   const {
     commerceId,
     sessionId,
@@ -198,6 +220,9 @@ export async function generateValidatedResponse(params: {
     aiModel = 'gpt-4o-mini',
     temperature = 0.2
   } = params;
+
+  const generationStart = Date.now();
+  const usageTotals = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
   if (resolvedFacts.isClosed && resolvedFacts.deterministicAnswer) {
     await saveAuditLog({
@@ -214,7 +239,13 @@ export async function generateValidatedResponse(params: {
       regenerationCount: 0,
       finalResponse: resolvedFacts.deterministicAnswer
     });
-    return resolvedFacts.deterministicAnswer;
+    return {
+      response: resolvedFacts.deterministicAnswer,
+      usage: {
+        promptTokens: 0, completionTokens: 0, totalTokens: 0,
+        estimatedCostUsd: 0, latencyMs: Date.now() - generationStart, model: aiModel,
+      }
+    };
   }
 
   const ragContext = ragChunks.map(c => `[Fuente: ${c.sourcename || 'Desconocida'}]\n${c.content}`).join('\n\n');
@@ -242,8 +273,8 @@ INFORMACIÓN DE CONTEXTO RAG:
 ${ragContext || 'No hay documentos adicionales.'}
 
 REGLAS STRICTAS DE RESPUESTA:
-1. NUNCA combines un horario anulado con el horario vigente. Si hay horario de verano activo, no menciones el horario habitual de 09:00 a 20:00.
-2. Si el cliente pregunta si abren por la tarde en verano, responde directamente con la franja de tarde de verano (19:30 a 21:30).
+1. NUNCA combines horarios anulados con el horario vigente: usa EXCLUSIVAMENTE las franjas de los hechos deterministas resueltos para la fecha consultada.
+2. Responde directamente con la franja horaria concreta que aplique según los hechos resueltos; si un dato no está en los hechos ni en el contexto RAG, di que no lo sabes.
 3. Responde de forma clara, amable y concisa sin divagar ni dar información innecesaria.
 4. Si el cliente formula más de una pregunta, estructura tu respuesta en bloques breves y diferenciados separados por un salto de línea.
 5. Máximo 3 líneas por párrafo. PROHIBIDO generar párrafos densos o listas interminables.
@@ -324,6 +355,13 @@ REGLAS STRICTAS DE RESPUESTA:
       max_tokens: 400,
       tools: tools
     });
+
+    // B-21: contabilizar el uso REAL de tokens de cada llamada
+    if (response.usage) {
+      usageTotals.promptTokens += response.usage.prompt_tokens || 0;
+      usageTotals.completionTokens += response.usage.completion_tokens || 0;
+      usageTotals.totalTokens += response.usage.total_tokens || 0;
+    }
 
     const choice = response.choices[0];
     const toolCall = choice?.message?.tool_calls?.find(
@@ -424,7 +462,18 @@ REGLAS STRICTAS DE RESPUESTA:
     finalResponse
   });
 
-  return finalResponse;
+  // B-21: devolver el uso real de tokens y el coste estimado junto a la respuesta
+  return {
+    response: finalResponse,
+    usage: {
+      promptTokens: usageTotals.promptTokens,
+      completionTokens: usageTotals.completionTokens,
+      totalTokens: usageTotals.totalTokens,
+      estimatedCostUsd: estimateCostUsd(aiModel, usageTotals.promptTokens, usageTotals.completionTokens),
+      latencyMs: Date.now() - generationStart,
+      model: aiModel,
+    }
+  };
 }
 
 async function saveAuditLog(data: {

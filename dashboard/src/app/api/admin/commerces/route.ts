@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../../src/db/prisma';
 import { verifyToken } from '../../../../lib/jwt';
 import { cookies } from 'next/headers';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 export async function GET(request: Request) {
   try {

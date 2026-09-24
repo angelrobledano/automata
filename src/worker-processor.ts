@@ -211,6 +211,7 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
 
       let aiResponse = '';
       let isCacheHit = false;
+      let generationMeta: { tokensUsed: number; estimatedCost: number; latencyMs: number } | undefined = undefined;
 
       if (cachedResponses.length > 0 && cachedResponses[0]) {
         aiResponse = cachedResponses[0].response;
@@ -219,9 +220,16 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
       } else {
         // 5. Llamamos a OpenAI inyectando el prompt enriquecido
         try {
-          aiResponse = await Sentry.startSpan({ op: 'openai-response-generation', name: 'Generating LLM text' }, () =>
+          const aiResult = await Sentry.startSpan({ op: 'openai-response-generation', name: 'Generating LLM text' }, () =>
             generateAIResponse({ ...commerce, systemPrompt: ragPrompt }, customerIdentifier, messageHistory, session.id)
           );
+          aiResponse = aiResult.response;
+          // B-21: uso REAL de tokens + coste estimado + latencia
+          generationMeta = {
+            tokensUsed: aiResult.usage.totalTokens,
+            estimatedCost: aiResult.usage.estimatedCostUsd,
+            latencyMs: aiResult.usage.latencyMs,
+          };
 
           // Guardar en Semantic Cache (solo si está permitido para este intent)
           if (cacheAllowed) {
@@ -244,7 +252,7 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
       await sendOmnichannelFormattedMessage(commerce, channelConnection, customerIdentifier, formattedMsg);
 
       // 6. Guardamos la respuesta generada solo si se entregó con éxito
-      await addMessageToSession(session.id, 'assistant', aiResponse);
+      await addMessageToSession(session.id, 'assistant', aiResponse, generationMeta);
       connection.publish('chat_updates', JSON.stringify({ commerceId, sessionId: session.id, message: { role: 'assistant', content: aiResponse, createdAt: new Date().toISOString() } }));
 
       // 7. Descontar del presupuesto mediante FeatureGuard

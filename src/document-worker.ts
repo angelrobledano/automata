@@ -9,6 +9,8 @@ import { createEmbedding, purgeSemanticCache } from './rag/index';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 // @ts-ignore
 import { LlamaParseReader } from 'llamaindex';
+import { scheduleDailyJobs, catalogSyncQueue, metaTokenRefreshQueue } from './queue';
+import { syncAllCommerces, refreshExpiringMetaTokens } from './jobs/maintenance';
 
 dotenv.config();
 
@@ -17,6 +19,31 @@ const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379'
 });
 
 console.log('[DocumentWorker] Iniciando worker de procesamiento asíncrono de documentos...');
+
+// B-22/B-17: workers de mantenimiento diario (este proceso es el "de jobs")
+const catalogSyncWorker = new Worker(
+  'maintenance-catalog-sync',
+  async () => {
+    console.log('[Maintenance] Ejecutando sync de catálogo de todos los comercios...');
+    return syncAllCommerces();
+  },
+  { connection: connection as any, concurrency: 1 }
+);
+
+const metaTokenRefreshWorker = new Worker(
+  'maintenance-meta-token-refresh',
+  async () => {
+    console.log('[Maintenance] Ejecutando refresh de tokens Meta próximos a caducar...');
+    return refreshExpiringMetaTokens();
+  },
+  { connection: connection as any, concurrency: 1 }
+);
+
+catalogSyncWorker.on('failed', (_job, err) => console.error('[Maintenance] catalog-sync falló:', err.message));
+metaTokenRefreshWorker.on('failed', (_job, err) => console.error('[Maintenance] meta-token-refresh falló:', err.message));
+
+scheduleDailyJobs().catch(err => console.error('[DocumentWorker] Error programando trabajos diarios:', err));
+
 
 const worker = new Worker('document-processing', async job => {
   const { commerceId, filename, fileBuffer, category } = job.data;
@@ -114,6 +141,8 @@ async function shutdown(signal: string) {
   console.log(`[DocumentWorker] ${signal} recibido. Cerrando worker de forma ordenada...`);
   try {
     await worker.close();
+    await catalogSyncWorker.close();
+    await metaTokenRefreshWorker.close();
     await connection.quit();
   } catch (err) {
     console.error('[DocumentWorker] Error durante el shutdown:', err);
