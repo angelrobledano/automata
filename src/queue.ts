@@ -20,6 +20,9 @@ export const enqueueMetaMessage = async (payload: any) => {
       type: 'exponential',
       delay: 1000,
     },
+    // Evitar acumulación ilimitada de jobs en Redis
+    removeOnComplete: { age: 3600, count: 5000 }, // 1h (o >5000 completados)
+    removeOnFail: { age: 7 * 24 * 3600 }, // 7 días para diagnóstico
   });
 };
 
@@ -32,5 +35,7 @@ export const enqueueDocument = async (payload: { commerceId: string, filename: s
       type: 'exponential',
       delay: 5000,
     },
+    removeOnComplete: { age: 3600, count: 5000 },
+    removeOnFail: { age: 7 * 24 * 3600 },
   });
 };

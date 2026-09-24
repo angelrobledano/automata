@@ -105,3 +105,21 @@ const worker = new Worker('document-processing', async job => {
 worker.on('failed', (job, err) => {
   console.error(`[DocumentWorker] Job ${job?.id} falló:`, err);
 });
+
+// Graceful shutdown: terminar el job en curso y cerrar conexiones antes de salir
+let isShuttingDown = false;
+async function shutdown(signal: string) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`[DocumentWorker] ${signal} recibido. Cerrando worker de forma ordenada...`);
+  try {
+    await worker.close();
+    await connection.quit();
+  } catch (err) {
+    console.error('[DocumentWorker] Error durante el shutdown:', err);
+  }
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));

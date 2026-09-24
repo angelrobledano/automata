@@ -79,3 +79,22 @@ server.listen(port, () => {
   console.log(`[Server] Escuchando en http://localhost:${port}`);
   console.log(`[Server] Webhook de Meta configurado en /api/webhooks/meta`);
 });
+
+// Graceful shutdown: cerrar servidor HTTP, sockets y conexión Redis antes de salir
+let isShuttingDown = false;
+async function shutdown(signal: string) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`[Server] ${signal} recibido. Cerrando servidor de forma ordenada...`);
+  try {
+    io.close();
+    server.close();
+    redisSub.quit();
+  } catch (err) {
+    console.error('[Server] Error durante el shutdown:', err);
+  }
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
