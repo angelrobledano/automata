@@ -20,6 +20,7 @@ export function resolveTargetRoom(channel: string, data: unknown): string | null
   switch (channel) {
     case 'chat_updates':
     case 'order_events':
+    case 'session_events':
       return roomForCommerce(commerceId);
     default:
       return null;

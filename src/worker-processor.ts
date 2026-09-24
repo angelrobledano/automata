@@ -108,6 +108,13 @@ export async function processMetaJob(job: Job, connection: IORedis) {
             suggestedReply: 'Hola, un agente humano tomará tu consulta de inmediato. ¿En qué te podemos ayudar?'
           }
         });
+        // B-18: avisar en vivo al dashboard del comercio (evento por sala)
+        connection.publish('session_events', JSON.stringify({
+          commerceId,
+          sessionId: session.id,
+          type: 'HUMAN_REQUIRED',
+          reason: 'Cliente solicita hablar con una persona.'
+        }));
         return;
       }
 

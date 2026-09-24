@@ -13,6 +13,8 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
   const [activeSessionId, setActiveSessionId] = useState(initialSessions[0]?.id || null);
   const [replyText, setReplyText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  // B-18: aviso en vivo de escalado a humano recibido por socket
+  const [escalationAlert, setEscalationAlert] = useState<{ sessionId: string; reason: string } | null>(null);
   
   // Filtros orientados a acción: 'all' | 'need_attention' | 'ai_active' | 'resolved'
   const [activeFilter, setActiveFilter] = useState<'all' | 'need_attention' | 'ai_active' | 'resolved'>('need_attention');
@@ -161,6 +163,17 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
 
             socket.on('connect_error', () => {
               isSocketActive = false;
+            });
+
+            socket.on('session_escalated', (data: any) => {
+              // B-18: refrescar la lista y avisar al operador al instante
+              fetch('/api/sessions')
+                .then(res => res.json())
+                .then(d => { if (d?.sessions) setSessions(d.sessions); })
+                .catch(() => {});
+              if (data?.sessionId) {
+                setEscalationAlert({ sessionId: data.sessionId, reason: data.reason || 'Un cliente solicita atención humana.' });
+              }
             });
 
             socket.on('new_message', (data: any) => {
@@ -466,6 +479,29 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
               </button>
             </div>
           </div>
+
+          {/* B-18: BANNER DE ESCALADO EN VIVO */}
+          {escalationAlert && (
+            <div className="px-3 py-2.5 bg-red-50 border-b border-red-200 flex items-start gap-2.5">
+              <div className="flex-1">
+                <p className="text-xs font-bold text-red-800">⚠️ Un cliente solicita atención humana</p>
+                <p className="text-2xs text-red-600">{escalationAlert.reason}</p>
+              </div>
+              <button
+                onClick={() => { setEscalationAlert(null); setActiveFilter('need_attention'); }}
+                className="text-2xs font-bold text-red-700 hover:text-red-900 underline"
+              >
+                Ver pendientes
+              </button>
+              <button
+                onClick={() => setEscalationAlert(null)}
+                className="text-slate-400 hover:text-slate-600 font-bold"
+                aria-label="Cerrar aviso"
+              >
+                ×
+              </button>
+            </div>
+          )}
 
           {/* LISTA SCROLLABLE DE CONVERSACIONES */}
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">

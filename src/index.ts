@@ -90,9 +90,9 @@ app.get('/health', (req, res) => {
 
 // Setup Redis Subscriber for WebSockets
 const redisSub = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379');
-redisSub.subscribe('chat_updates', 'order_events', (err, count) => {
+redisSub.subscribe('chat_updates', 'order_events', 'session_events', (err, count) => {
   if (err) console.error('Error subscribing to Redis channels:', err);
-  else console.log(`[Socket.io] Suscrito a canales de Redis: chat_updates, order_events`);
+  else console.log(`[Socket.io] Suscrito a canales de Redis: chat_updates, order_events, session_events`);
 });
 
 redisSub.on('message', (channel, message) => {
@@ -110,6 +110,9 @@ redisSub.on('message', (channel, message) => {
     } else if (channel === 'order_events') {
       console.log(`[Socket.io] Retransmitiendo new_order a ${room}:`, data.order?.id);
       io.to(room).emit('new_order', data);
+    } else if (channel === 'session_events') {
+      // B-18: aviso en vivo de escalado a humano para el inbox del comercio
+      io.to(room).emit('session_escalated', data);
     }
   } catch (e) {
     console.error('[Socket.io] Error parseando mensaje de Redis:', e);

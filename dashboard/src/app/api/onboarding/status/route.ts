@@ -28,9 +28,15 @@ export async function GET(request: Request) {
       where: { commerceId: commerce.id }
     });
 
+    // B-27: paso ecommerce REAL (antes hardcodeado a false y el paso nunca
+    // se completaba aunque el merchant conectara su tienda)
+    const meta = (commerce.providerMetadata as any) || {};
+    const hasWoo = Boolean(meta.wooUrl && meta.wooConsumerKey && meta.wooConsumerSecret);
+    const hasShopify = Boolean((meta.shopifyStoreDomain || meta.shopifyShopUrl) && meta.shopifyAccessToken);
+
     const steps = {
       knowledge: knowledgeCount > 0,
-      ecommerce: false,
+      ecommerce: hasWoo || hasShopify,
       whatsapp: commerce.channelConnections.some(c => c.provider === 'META' && c.status === 'CONNECTED')
     };
 
