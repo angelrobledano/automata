@@ -39,14 +39,25 @@ export async function POST(request: Request) {
     const encryptedKey = encrypt(wooConsumerKey);
     const encryptedSecret = encrypt(wooConsumerSecret);
 
+    const currentCommerce = await prisma.commerce.findUnique({
+      where: { id: payload.commerceId as string },
+      select: { providerMetadata: true }
+    });
+
+    const currentMeta = (currentCommerce?.providerMetadata && typeof currentCommerce.providerMetadata === 'object')
+      ? (currentCommerce.providerMetadata as Record<string, any>)
+      : {};
+
     await prisma.commerce.update({
       where: { id: payload.commerceId as string },
       data: {
         providerMetadata: {
+          ...currentMeta,
           wooUrl,
           wooConsumerKey: encryptedKey,
           wooConsumerSecret: encryptedSecret,
-          wooConnectedAt: new Date().toISOString()
+          wooConnectedAt: new Date().toISOString(),
+          provider: 'woocommerce'
         }
       }
     });

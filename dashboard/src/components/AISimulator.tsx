@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Bot, Sparkles, RotateCcw, X, Send } from 'lucide-react';
 import { analytics } from '@/lib/analytics';
 
 type Role = 'user' | 'assistant';
@@ -80,11 +81,11 @@ export function AISimulator() {
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-24 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-2xl flex items-center justify-center z-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="fixed bottom-24 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center z-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 transition-colors cursor-pointer"
             aria-label="Abrir Simulador IA"
             title="Probar simulador"
           >
-            <span className="text-2xl">✨</span>
+            <Sparkles className="w-6 h-6 text-white" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -96,16 +97,18 @@ export function AISimulator() {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed bottom-24 right-4 md:bottom-8 md:right-8 w-[350px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[70vh] bg-background rounded-lg shadow-2xl border border-border z-50 flex flex-col origin-bottom-right"
+            className="fixed bottom-24 right-4 md:bottom-8 md:right-8 w-[350px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[70vh] bg-background rounded-2xl shadow-2xl border border-border z-50 flex flex-col origin-bottom-right overflow-hidden"
           >
             {/* Header */}
-            <div className="bg-primary p-4 rounded-t-2xl flex justify-between items-center text-primary-foreground">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-card/20 rounded-full flex items-center justify-center text-sm">🤖</div>
+            <div className="bg-blue-600 p-4 flex justify-between items-center text-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
                 <div>
-                  <h3 className="font-bold text-sm leading-tight">Simulador IA</h3>
-                  <p className="text-[10px] text-primary-foreground/80 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                  <h3 className="font-bold text-sm leading-tight text-white">Simulador IA</h3>
+                  <p className="text-[10px] text-blue-100 flex items-center gap-1.5 font-medium">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
                     En línea (API real)
                   </p>
                 </div>
@@ -113,22 +116,18 @@ export function AISimulator() {
               <div className="flex items-center gap-1">
                 <button 
                   onClick={handleClear}
-                  className="w-8 h-8 bg-card/10 hover:bg-card/20 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="w-8 h-8 hover:bg-white/15 rounded-full flex items-center justify-center transition-colors text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer"
                   aria-label="Reiniciar chat"
                   title="Reiniciar chat"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
+                  <RotateCcw className="w-4 h-4 text-white" />
                 </button>
                 <button 
                   onClick={() => setIsOpen(false)}
-                  className="w-8 h-8 bg-card/10 hover:bg-card/20 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="w-8 h-8 hover:bg-white/15 rounded-full flex items-center justify-center transition-colors text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer"
                   aria-label="Cerrar Simulador IA"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
+                  <X className="w-4 h-4 text-white" />
                 </button>
               </div>
             </div>
@@ -164,11 +163,13 @@ export function AISimulator() {
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} items-end gap-2`}
                   >
                     {msg.role === 'assistant' && (
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs flex-shrink-0">🤖</div>
+                      <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-3.5 h-3.5 text-blue-600" />
+                      </div>
                     )}
                     <div className={`px-4 py-2 text-sm max-w-[80%] flex flex-col gap-2 ${
                       msg.role === 'user' 
-                        ? 'bg-primary text-primary-foreground rounded-lg rounded-tr-sm shadow-none' 
+                        ? 'bg-blue-600 text-white rounded-lg rounded-tr-sm shadow-none font-medium' 
                         : 'bg-background text-foreground rounded-lg rounded-tl-sm border border-border shadow-none'
                     }`}>
                       {parsed.htmlContent && (
@@ -199,11 +200,13 @@ export function AISimulator() {
                     exit={{ opacity: 0, scale: 0.9 }}
                     className="flex justify-start items-end gap-2"
                   >
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs flex-shrink-0">🤖</div>
+                    <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-3.5 h-3.5 text-blue-600" />
+                    </div>
                     <div className="bg-background rounded-lg rounded-tl-sm px-4 py-3 border border-border shadow-none flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce"></span>
-                      <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                      <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                      <span className="w-1.5 h-1.5 bg-blue-600/70 rounded-full animate-pulse"></span>
+                      <span className="w-1.5 h-1.5 bg-blue-600/70 rounded-full animate-pulse [animation-delay:150ms]"></span>
+                      <span className="w-1.5 h-1.5 bg-blue-600/70 rounded-full animate-pulse [animation-delay:300ms]"></span>
                     </div>
                   </motion.div>
                 )}
@@ -225,12 +228,10 @@ export function AISimulator() {
                 <button 
                   onClick={handleSend}
                   disabled={!inputValue.trim() || isTyping}
-                  className="w-8 h-8 bg-primary text-primary-foreground rounded-lg flex items-center justify-center disabled:opacity-50 hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center disabled:opacity-50 hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 cursor-pointer"
                   aria-label="Enviar mensaje"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                  </svg>
+                  <Send className="w-4 h-4 text-white" />
                 </button>
               </div>
             </div>

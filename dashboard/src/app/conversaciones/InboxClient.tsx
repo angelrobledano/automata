@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { 
-  MessageSquare, User, Bot, CheckCircle2, Clock, AlertCircle, Phone, ArrowLeft, Send, Sparkles, X, ChevronRight, Lock, RotateCcw, AlertTriangle, ShieldAlert
+  MessageSquare, User, Bot, CheckCircle2, Clock, AlertCircle, Phone, ArrowLeft, Send, Sparkles, X, ChevronRight, Lock, RotateCcw, AlertTriangle, ShieldAlert, Search
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ConsolidatedStatusBar } from '@/components/ConsolidatedStatusBar';
@@ -125,46 +125,124 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
   };
 
   useEffect(() => {
-    // Solo conectar a localhost si se ejecuta localmente en la maquina del desarrollador
+    let isSocketActive = false;
     const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || (isLocalhost ? 'http://localhost:3001' : null);
 
-    if (!socketUrl) return;
+    let socket: any = null;
 
-    const socket = io(socketUrl, {
-      autoConnect: true,
-      reconnection: true,
-      transports: ['websocket', 'polling']
-    });
-    
-    socket.on('new_message', (data) => {
-      setSessions(prev => {
-        const updated = [...prev];
-        const sessionIndex = updated.findIndex(s => s.id === data.sessionId);
-        
-        if (sessionIndex > -1) {
-          const session = updated[sessionIndex];
-          if (!session.messages) session.messages = [];
-          
-          const msgExists = session.messages.find((m: any) => m.content === data.message.content && m.role === data.message.role);
-          if (!msgExists) {
-             session.messages.push(data.message);
-             session.updatedAt = new Date();
-          }
-          return updated.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        } else {
-          fetch(`/api/sessions`)
-            .then(res => res.json())
-            .then(data => {
-              if (data.sessions) setSessions(data.sessions);
+    if (socketUrl) {
+      try {
+        socket = io(socketUrl, {
+          autoConnect: true,
+          reconnection: true,
+          transports: ['websocket', 'polling']
+        });
+
+        socket.on('connect', () => {
+          isSocketActive = true;
+        });
+
+        socket.on('disconnect', () => {
+          isSocketActive = false;
+        });
+
+        socket.on('connect_error', () => {
+          isSocketActive = false;
+        });
+
+        socket.on('new_message', (data: any) => {
+          setSessions(prev => {
+            const updated = [...prev];
+            const sessionIndex = updated.findIndex(s => s.id === data.sessionId);
+            
+            if (sessionIndex > -1) {
+              const session = updated[sessionIndex];
+              if (!session.messages) session.messages = [];
+              
+              const msgExists = session.messages.find((m: any) => m.content === data.message.content && m.role === data.message.role);
+              if (!msgExists) {
+                 session.messages.push(data.message);
+                 session.updatedAt = new Date();
+              }
+              return updated.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+            } else {
+              fetch(`/api/sessions`)
+                .then(res => res.json())
+                .then(data => {
+                  if (data?.sessions) setSessions(data.sessions);
+                })
+                .catch(() => {});
+              return prev;
+            }
+          });
+        });
+      } catch (err) {
+        isSocketActive = false;
+      }
+    }
+
+    // Polling fallback para entornos serverless (Vercel) o cuando el socket está caído
+    let pollTimer: NodeJS.Timeout | null = null;
+
+    const pollSessions = async () => {
+      // Si el socket está activo y conectado, podemos espaciar el polling
+      if (isSocketActive) return;
+
+      try {
+        const res = await fetch('/api/sessions');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.sessions && Array.isArray(data.sessions)) {
+            setSessions(prev => {
+              // Si no hay cambios reales en las sesiones, evitamos re-renders innecesarios
+              const prevMap = new Map(prev.map(s => [s.id, s]));
+              let hasChanges = data.sessions.length !== prev.length;
+
+              if (!hasChanges) {
+                for (const newS of data.sessions) {
+                  const oldS = prevMap.get(newS.id);
+                  if (!oldS || oldS.status !== newS.status || (oldS.messages?.length || 0) !== (newS.messages?.length || 0)) {
+                    hasChanges = true;
+                    break;
+                  }
+                }
+              }
+
+              return hasChanges ? data.sessions : prev;
             });
-          return prev;
+          }
         }
-      });
-    });
+      } catch (e) {
+        // Silencioso en caso de micro-cortes de red
+      }
+    };
+
+    const setupPolling = () => {
+      if (pollTimer) clearInterval(pollTimer);
+      const interval = typeof document !== 'undefined' && document.hidden ? 20000 : 5000;
+      pollTimer = setInterval(pollSessions, interval);
+    };
+
+    setupPolling();
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        pollSessions();
+      }
+      setupPolling();
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
 
     return () => {
-      socket.disconnect();
+      if (socket) socket.disconnect();
+      if (pollTimer) clearInterval(pollTimer);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
     };
   }, []);
 
@@ -288,7 +366,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
   };
 
   return (
-    <div className="h-[calc(100vh-2rem)] bg-[#F8FAFC] font-sans text-slate-900 flex flex-col p-4 md:p-6 overflow-hidden">
+    <div className="h-[calc(100dvh-1rem)] md:h-[calc(100vh-2rem)] bg-[#F8FAFC] font-sans text-slate-900 flex flex-col p-4 md:p-6 overflow-hidden">
       
       {/* HEADER PRINCIPAL Y DE CONTROL */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3 flex-shrink-0">
@@ -298,34 +376,34 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
         </div>
         
         {needAttentionCount > 0 && (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-900 shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-            <span>{needAttentionCount} conversación{needAttentionCount > 1 ? 'es' : ''} requieren tu atención</span>
+          <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-800 animate-pulse">
+            <AlertTriangle className="w-4 h-4 text-amber-600" />
+            <span>{needAttentionCount} conversación{needAttentionCount > 1 ? 'es' : ''} requiere{needAttentionCount === 1 ? '' : 'n'} atención</span>
           </div>
         )}
       </div>
 
-      {/* NUEVA BARRA CONSOLIDADA DE ESTADO DE CONEXIONES (Sincronizada con la DB) */}
-      <ConsolidatedStatusBar />
-
-      {/* CONTENEDOR PRINCIPAL CHAT */}
-      <div className="flex-1 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-row min-h-0">
+      {/* WORKSPACE PRINCIPAL A 2 COLUMNAS */}
+      <div className="flex-1 flex gap-4 min-h-0 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         
-        {/* PANEL IZQUIERDO: LISTA DE CONVERSACIONES */}
-        <div className={`flex-shrink-0 border-r border-slate-200 flex-col bg-slate-50/50 
-          ${showListOnMobile ? 'flex w-full md:w-[360px]' : 'hidden md:flex w-[360px]'}`}>
-          
-          {/* BARRA DE BÚSQUEDA Y FILTROS ORIENTADOS A ACCIÓN */}
-          <div className="p-3.5 border-b border-slate-200 bg-white space-y-2.5">
-            <input 
-              type="search" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por cliente o mensaje..." 
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
-            />
+        {/* COLUMNA 1: LISTADO DE CONVERSACIONES */}
+        <div className={`w-full md:w-[340px] lg:w-[380px] border-r border-slate-200 flex flex-col bg-slate-50/50 flex-shrink-0 ${
+          showListOnMobile ? 'flex' : 'hidden md:flex'
+        }`}>
+          {/* BARRA DE FILTROS */}
+          <div className="p-3 border-b border-slate-200 bg-white space-y-2">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
+              <input 
+                type="text" 
+                placeholder="Buscar por cliente..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-normal"
+              />
+            </div>
 
-            <div className="grid grid-cols-4 bg-slate-100 p-1 rounded-lg gap-1">
+            <div className="grid grid-cols-4 gap-1 bg-slate-100 p-0.5 rounded-lg">
               <button 
                 onClick={() => setActiveFilter('all')}
                 className={`text-[11px] font-bold py-1 rounded-md transition-all ${
@@ -377,7 +455,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
               <div className="p-8 text-center text-xs text-slate-500 space-y-1">
                 <CheckCircle2 className="w-6 h-6 text-slate-300 mx-auto mb-2" />
                 <p className="font-semibold text-slate-700">No hay conversaciones en esta categoría</p>
-                <p className="text-[11px] text-slate-400">Todo el trabajo de esta sección está completado</p>
+                <p className="text-[11px] text-slate-500 font-medium">Todo el trabajo de esta sección está completado</p>
               </div>
             ) : (
               filteredSessions.map((session) => {
@@ -390,17 +468,27 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
                 return (
                   <div
                     key={session.id}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setActiveSessionId(session.id);
+                        setShowListOnMobile(false);
+                        setShowReturnConfirm(false);
+                      }
+                    }}
                     onClick={() => {
                       setActiveSessionId(session.id);
                       setShowListOnMobile(false);
                       setShowReturnConfirm(false);
                     }}
-                    className={`p-3.5 cursor-pointer transition-all border-l-4 ${
+                    className={`p-3.5 cursor-pointer transition-colors border-b border-slate-100 ${
                       isActive 
-                        ? 'bg-blue-50/40 border-l-blue-600' 
+                        ? 'bg-blue-50/80 text-slate-900' 
                         : isNeedAttention
-                        ? 'bg-amber-50/30 border-l-amber-500 hover:bg-amber-50/50'
-                        : 'border-l-transparent hover:bg-white'
+                        ? 'bg-amber-50/40 hover:bg-amber-50/60'
+                        : 'hover:bg-slate-50/80'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -413,7 +501,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
                         </span>
                       </div>
                       
-                      <span className="text-[10px] text-slate-400 shrink-0">
+                      <span className="text-[10px] text-slate-500 font-medium shrink-0">
                         {new Date(session.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -675,7 +763,7 @@ export default function InboxClient({ initialSessions }: { initialSessions: any[
                           {renderMessageContent(msg)}
                         </div>
                         {!isUser && (
-                          <div className="text-[9px] text-slate-400 font-medium mt-0.5 px-1">
+                          <div className="text-[9px] text-slate-500 font-medium mt-0.5 px-1">
                             {activeSession.channelConnection?.provider?.toLowerCase() === 'instagram' 
                               ? '📸 Instagram Direct' 
                               : activeSession.channelConnection?.provider?.toLowerCase() === 'whatsapp' 

@@ -10,7 +10,7 @@ export default function LandingPage() {
   const [email, setEmail] = useState('');
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-blue-100">
+    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
       
       {/* HEADER */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">

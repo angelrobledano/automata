@@ -46,6 +46,7 @@ export async function generateAIResponse(
     const validatedResponse = await generateValidatedResponse({
       commerceId: commerce.id,
       sessionId: sessionId ?? null,
+      customerPhone,
       userQuestion: lastUserMsg,
       systemPrompt: businessContextPrompt,
       messageHistory: messageHistory.map(m => ({ role: m.role, content: m.content || '' })),

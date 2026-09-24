@@ -1,29 +1,30 @@
-# Brandbook: Automata (Linear / Polar.sh Style adaptado a E-commerce)
+# Brandbook: Automata (Modern Clean SaaS Style para E-commerce)
 
-## Filosofía Visual (Elegancia Accesible)
-Automata es una herramienta profesional y potente, pero diseñada para **comerciantes y dueños de negocio**, no para ingenieros. La interfaz debe transmitir confianza, claridad, modernidad y facilidad de uso, eliminando cualquier sensación de complejidad técnica.
-- **Fondo Oscuro Profundo (Dark Mode First)**: Casi negro. Aporta un toque premium y moderno, reduciendo la fatiga visual.
-- **Contraste Sutil pero Claro**: Los elementos se diferencian por ligeros cambios de elevación (fondos ligeramente más claros y bordes sutiles de 1px). Las divisiones deben ser evidentes para guiar al usuario sin abrumarlo con sombras.
-- **Menos es Más (Foco en el Negocio)**: Eliminación radical de ruido visual. Si un elemento no ayuda al comerciante a vender más o entender su estado, se oculta o se simplifica.
+## Filosofía Visual (Claridad y Usabilidad Comercial)
+Automata es una herramienta profesional y directa, diseñada para **comerciantes, dueños de tiendas online y negocios locales**, no para ingenieros. La interfaz transmite confianza, luminosidad, orden y agilidad operativa:
+- **Fondo Claro Principal (Light Mode First)**: `#F8FAFC` (`slate-50`). Proporciona máxima legibilidad, aspecto limpio y profesional adecuado para entornos de oficina o mostrador.
+- **Tarjetas y Elevación Nítida**: Fondos en blanco puro (`#FFFFFF`) con bordes sutiles de 1px (`#E5E7EB` / `slate-200`) y sombras microscópicas (`shadow-xs` / `shadow-sm`). Sin sombras pesadas ni degradados invasivos.
+- **Menos es Más (Foco en Ventas y Pedidos)**: Eliminación radical de ruido visual y métricas de vanidad. El comerciante debe ver sus pedidos pendientes, su facturación y las alertas que requieren respuesta humana de un solo vistazo.
 
 ## Tipografía (Geist / Inter)
-- **Cuerpo (Body)**: 14px, opacidad moderada (`text-slate-400` o token equivalente). Debe ser sumamente legible para leer largas listas de pedidos o instrucciones.
-- **Títulos (Headings)**: Font weight `semibold` o `medium`. Nunca súper gruesos. Color casi blanco (`text-slate-100`). Deben guiar al usuario amigablemente por cada sección.
-- **Monospace (Uso Restringido)**: Solo para métricas clave o códigos de pedido. Evitar usar tipografías que parezcan "código de programación" en zonas donde el usuario espera lenguaje de negocio.
+- **Cuerpo (Body)**: 13px - 14px, color de alto contraste suave (`text-slate-600` o `#475569`). Altamente legible para revisar historiales de chat y listas de pedidos.
+- **Títulos (Headings)**: Font weight `bold` o `semibold`. Color oscuro profundo (`text-slate-900` o `#0F172A`).
+- **Monospace (Uso Restringido)**: Exclusivamente para identificadores de pedido (`#1044`), teléfonos o importes numéricos.
 
-## Color de Acento (El "Polar Blue")
-- **Valor Canónico**: `#0066FF` (Azul Eléctrico). Transmite seguridad, tecnología amigable y acción directa.
-- **Uso Estricto (Llamados a la Acción)**: Única y exclusivamente para botones clave ("Conectar WhatsApp", "Guardar Cambios"), enlaces activos, o indicadores de éxito (el agente está funcionando). 
-- **Prohibido**: No usar el color de acento en fondos grandes o de forma decorativa, ya que diluye la importancia de las acciones que el usuario debe tomar.
+## Color de Acento (El "Commerce Blue")
+- **Valor Canónico**: `#2563EB` (`blue-600`) con hover en `#1D4ED8` (`blue-700`) y fondos activos suaves en `#EFF6FF` (`blue-50`).
+- **Uso Estricto (Llamados a la Acción)**: Reservado para botones principales de conversión ("Guardar Cambios", "Nuevo Pedido", "Conectar WhatsApp"), enlaces activos y badges de estado operando correctamente.
+- **Prohibido**: No usar azul de acento en fondos de secciones completas ni en textos largos.
 
-## Layout Canónico & Spacing ("Respiración Visual")
-- **Espacio Negativo**: Deja que los elementos respiren. Márgenes enormes entre secciones (`gap-16`, `gap-24`) para que el usuario no sienta claustrofobia técnica.
-- **Densidad Controlada**: Las tablas de métricas e inbox deben estar organizadas para leerse de un vistazo. 
+## Layout Canónico & Spacing
+- **Estructura Respirada**: Separaciones generosas (`space-y-6`, `gap-6`) para que la interfaz no resulte abrumadora ni densa.
 - **Radios de Borde (Border Radius)**:
-  - Botones y campos de texto: `4px` o `6px` (limpios y modernos).
-  - Tarjetas y contenedores: `8px` o `12px` (suavidad estructural).
+  - Botones y campos de formulario: `8px` (`rounded-lg` / `rounded-md`).
+  - Tarjetas y contenedores: `12px` (`rounded-xl`).
+  - Evitar elementos en forma de píldora extrema (`rounded-full`) en botones primarios.
 
-## Interacciones y Estado (Empatía Visual)
-- **Hovers (Estados de paso)**: Suaves y rápidos (`transition-all duration-150`). Los elementos deben responder al ratón para confirmar que son interactivos, dando seguridad al usuario de que "el sistema responde".
-- **Bordes Activos (Ring)**: Al hacer clic en un campo de texto, usar un anillo sutil de color de acento (`#0066FF`) para enfocar la atención sin estridencias.
-- **Estados de Carga**: Usar esqueletos (skeletons) suaves en lugar de "spinners" técnicos, acompañados de mensajes cercanos como "Preparando tu asistente...".
+## Interacciones y Estados
+- **Transiciones**: Rápidas y fluidas (`transition-all duration-150 ease-out`).
+- **Focus / Ring**: Anillo sutil de foco azul (`focus:ring-2 focus:ring-blue-600 focus:border-transparent`).
+- **Estados de Carga**: Skeletons suaves y pulcros con texto informativo ("Cargando tus pedidos..."), evitando spinners circulares técnicos.
+

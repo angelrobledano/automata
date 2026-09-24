@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const prisma = new PrismaClient();
 
@@ -7,6 +10,7 @@ async function main() {
   console.log('Seeding database...');
 
   // Clean up
+  await prisma.order.deleteMany();
   await prisma.message.deleteMany();
   await prisma.session.deleteMany();
   await prisma.documentChunk.deleteMany();
@@ -266,6 +270,61 @@ async function main() {
       { sessionId: acmeSession6.id, role: 'assistant', content: 'Hola, perdona el fallo informático. Ya he aplicado un 20% de descuento manual a tu carrito. Puedes recargar la página y proceder al pago.' },
       { sessionId: acmeSession6.id, role: 'user', content: 'Mil gracias, ya está pagado.' }
     ]
+  });
+
+  // 7. PEDIDOS Y ENCARGOS DEMO (Omnicanal)
+  console.log('Creando pedidos de prueba (Encargo local, WooCommerce, Shopify)...');
+  await prisma.order.create({
+    data: {
+      commerceId: commerce.id,
+      source: 'MANUAL',
+      status: 'PENDING',
+      customerName: 'María López',
+      customerPhone: '+34611223344',
+      deliveryType: 'PICKUP',
+      pickupTime: 'Hoy a las 18:30',
+      items: [
+        { name: 'Tarta de queso artesanal (1kg)', quantity: 1, price: 24.50, notes: 'Sin frutos secos' }
+      ],
+      totalAmount: 24.50,
+      notes: 'Encargo recibido vía WhatsApp. Avisar al salir de cocina.'
+    }
+  });
+
+  await prisma.order.create({
+    data: {
+      commerceId: commerce.id,
+      source: 'WOOCOMMERCE',
+      externalOrderId: '#1044',
+      status: 'PREPARING',
+      customerName: 'David Gómez',
+      customerPhone: '+34622334455',
+      deliveryType: 'DELIVERY',
+      deliveryAddress: 'Calle Mayor 14, 2ºB, Madrid',
+      items: [
+        { name: 'Caja 6 Croissants de mantequilla', quantity: 2, price: 12.00 }
+      ],
+      totalAmount: 24.00,
+      notes: 'Pedido sincronizado automáticamente desde WooCommerce.'
+    }
+  });
+
+  await prisma.order.create({
+    data: {
+      commerceId: commerce.id,
+      source: 'SHOPIFY',
+      externalOrderId: '#1092',
+      status: 'READY',
+      customerName: 'Elena Ruiz',
+      customerPhone: '+34633445566',
+      deliveryType: 'PICKUP',
+      pickupTime: 'Mañana a las 10:00',
+      items: [
+        { name: 'Pack Degustación Café Especialidad', quantity: 1, price: 18.90 }
+      ],
+      totalAmount: 18.90,
+      notes: 'Listo en el mostrador para recogida.'
+    }
   });
 
   console.log('Seed completed successfully!');

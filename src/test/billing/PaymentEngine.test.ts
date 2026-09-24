@@ -5,14 +5,16 @@ import { StripeProvider } from '../../billing/providers/StripeProvider';
 // Mock Provider
 vi.mock('../../billing/providers/StripeProvider', () => {
   return {
-    StripeProvider: vi.fn().mockImplementation(() => ({
-      createCustomer: vi.fn().mockResolvedValue({ id: 'cus_test' }),
-      createCheckoutSession: vi.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/test' }),
-      handleWebhook: vi.fn().mockResolvedValue({
-        eventId: 'evt_test',
-        eventType: 'SUBSCRIPTION_CREATED'
-      })
-    }))
+    StripeProvider: vi.fn().mockImplementation(function (this: any) {
+      return {
+        createCustomer: vi.fn().mockResolvedValue({ id: 'cus_test' }),
+        createCheckoutSession: vi.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/test' }),
+        handleWebhook: vi.fn().mockResolvedValue({
+          eventId: 'evt_test',
+          eventType: 'SUBSCRIPTION_CREATED'
+        })
+      };
+    })
   };
 });
 

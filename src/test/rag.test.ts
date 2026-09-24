@@ -34,7 +34,8 @@ describe('RAG Module (Generación Aumentada por Recuperación)', () => {
 
   it('debería generar un embedding a partir de un texto', async () => {
     const embedding = await createEmbedding('texto de prueba');
-    expect(embedding).toEqual([0.1, 0.2, 0.3]);
+    expect(embedding.slice(0, 3)).toEqual([0.1, 0.2, 0.3]);
+    expect(embedding).toHaveLength(1536);
   });
 
   it('debería añadir un chunk a la base de datos llamando a $executeRaw', async () => {

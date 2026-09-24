@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../../../src/db/prisma';
+import { decrypt } from '../../../../../../../src/utils/crypto';
 import { verifyToken } from '@/lib/jwt';
 import { cookies } from 'next/headers';
 
@@ -39,7 +40,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
     if (messageRole !== 'internal_note') {
       if (session.channelConnection?.provider === 'META' && session.channelConnection.channelPhoneId) {
-        const waToken = process.env.WHATSAPP_TOKEN || session.channelConnection.accessToken || '';
+        const rawToken = process.env.WHATSAPP_TOKEN || session.channelConnection.accessToken || '';
+        const waToken = rawToken ? decrypt(rawToken) : '';
         if (waToken) {
           const { WhatsAppService } = await import('../../../../../services/whatsapp.service');
           await WhatsAppService.sendTextMessage(
@@ -49,7 +51,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
             waToken
           );
         } else {
-          console.log(`[WhatsApp API Mock] Token faltante para enviar a ${id}: "${message}"`);
+          console.warn(`[WhatsApp API] Token faltante o no descifrable para enviar a sesión ${id}: "${message}"`);
         }
       } else {
         console.log(`[WhatsApp API Mock] Enviando mensaje a sesión ${id}: "${message}"`);
