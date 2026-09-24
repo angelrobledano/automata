@@ -45,7 +45,10 @@ export const validateMetaSignature = (req: Request): boolean => {
   }
 
   try {
-    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const rawBody = (req as any).rawBody 
+      ? (req as any).rawBody 
+      : (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+
     const expectedSignature = 'sha256=' + crypto
       .createHmac('sha256', appSecret)
       .update(rawBody)

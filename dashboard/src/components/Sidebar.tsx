@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { 
-  Home, MessageSquare, Brain, Settings, LogOut, ChevronDown, Sparkles, CheckCircle2, ShieldCheck, AlertCircle
+  Home, MessageSquare, Brain, Settings, LogOut, ChevronDown, Sparkles, CheckCircle2, ShieldCheck, AlertCircle, ShoppingBag
 } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [userRole, setUserRole] = useState<string>('OWNER');
   const [userName, setUserName] = useState<string>('Cargando...');
 
@@ -29,30 +30,45 @@ export default function Sidebar() {
       }
     });
 
-    // Poll every 10 seconds for pending count
+    // Fetch orders stats for badge
+    const fetchOrdersStats = () => {
+      fetch('/api/orders')
+        .then(res => res.json())
+        .then(data => {
+          if (data.stats?.pending !== undefined) {
+            setPendingOrdersCount(data.stats.pending);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchOrdersStats();
+
+    // Poll every 10 seconds for pending counts
     const interval = setInterval(() => {
       fetch('/api/metrics').then(res => res.json()).then(data => {
         if (data.pendingCount !== undefined) {
           setPendingCount(data.pendingCount);
         }
       });
+      fetchOrdersStats();
     }, 10000);
     return () => clearInterval(interval);
   }, []);
 
   let navItems = [
     { name: 'Inicio', path: '/dashboard', icon: Home },
+    { name: 'Pedidos', path: '/pedidos', icon: ShoppingBag, badge: pendingOrdersCount > 0 ? pendingOrdersCount.toString() : undefined },
     { name: 'Conversaciones', path: '/conversaciones', icon: MessageSquare, badge: pendingCount > 0 ? pendingCount.toString() : undefined },
     { name: 'Conocimiento', path: '/cerebro', icon: Brain },
     { name: 'Configuración', path: '/ajustes', icon: Settings },
   ];
 
   if (userRole === 'AGENT') {
-    navItems = navItems.filter(i => i.path === '/conversaciones');
+    navItems = navItems.filter(i => i.path === '/conversaciones' || i.path === '/pedidos');
   }
 
   // Ocultar el Sidebar en rutas públicas, onboarding, landing y backoffice
-  const appRoutes = ['/dashboard', '/conversaciones', '/cerebro', '/ajustes'];
+  const appRoutes = ['/dashboard', '/pedidos', '/conversaciones', '/cerebro', '/ajustes'];
   const isAppRoute = appRoutes.some(route => pathname.startsWith(route));
 
   if (!isAppRoute) {
@@ -134,7 +150,8 @@ export default function Sidebar() {
             window.location.href = '/login';
           }}
           title="Cerrar sesión"
-          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+          aria-label="Cerrar sesión"
+          className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
         >
           <LogOut className="w-4 h-4" />
         </button>

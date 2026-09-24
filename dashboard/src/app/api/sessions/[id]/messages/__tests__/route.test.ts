@@ -5,12 +5,23 @@ vi.mock('../../../../../../../../src/db/prisma', () => ({
   prisma: {
     session: {
       findUnique: vi.fn(),
+      findFirst: vi.fn().mockResolvedValue({ id: 'sess-123', commerceId: 'comm-123' }),
       update: vi.fn(),
     },
     message: {
       create: vi.fn(),
     }
   }
+}));
+
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(async () => ({
+    get: vi.fn(() => ({ value: 'fake-token' }))
+  }))
+}));
+
+vi.mock('@/lib/jwt', () => ({
+  verifyToken: vi.fn(async () => ({ commerceId: 'comm-123' }))
 }));
 
 describe('Messages API POST', () => {

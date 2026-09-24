@@ -65,6 +65,7 @@ model Commerce {
   invoices         Invoice[]
   structuredRules  StructuredKnowledgeRule[]
   responseAuditLogs ResponseAuditLog[]
+  orders           Order[]
 }
 
 enum RuleType {
@@ -380,3 +381,57 @@ model BillingEvent {
   payload        Json
   processedAt    DateTime @default(now())
 }
+
+// ==========================================
+// ORDER DOMAIN (Omnichannel: Woo, Shopify, Encargo Manual)
+// ==========================================
+
+enum OrderSource {
+  MANUAL
+  WOOCOMMERCE
+  SHOPIFY
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum DeliveryType {
+  PICKUP
+  DELIVERY
+}
+
+model Order {
+  id                 String       @id @default(uuid())
+  commerceId         String
+  sessionId          String?
+  source             OrderSource  @default(MANUAL)
+  externalOrderId    String?      // Ej: #1044 en WooCommerce o #1001 en Shopify
+  status             OrderStatus  @default(PENDING)
+  
+  customerName       String?
+  customerPhone      String
+  deliveryType       DeliveryType @default(PICKUP)
+  deliveryAddress    String?
+  pickupTime         String?      // Ej: "Hoy a las 19:30" o "Mañana por la mañana"
+  
+  items              Json         // Array de items: [{ name: string, quantity: number, price?: number, notes?: string }]
+  totalAmount        Float?
+  notes              String?      @db.Text
+  
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  commerce           Commerce     @relation(fields: [commerceId], references: [id], onDelete: Cascade)
+
+  @@index([commerceId])
+  @@index([status])
+  @@index([customerPhone])
+  @@index([sessionId])
+}
+

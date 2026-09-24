@@ -116,10 +116,10 @@ export function getBusinessStatus(
 
   // 2. Revisar los siguientes 7 días
   for (let offset = 1; offset <= 7; offset++) {
-    const nextDay = daysOrder[(currentIndex + offset) % 7];
+    const nextDay = daysOrder[(currentIndex + offset) % 7]!;
     const nextConfig = schedule.days[nextDay];
     if (nextConfig && !nextConfig.closed && Array.isArray(nextConfig.slots) && nextConfig.slots.length > 0) {
-      const firstSlot = nextConfig.slots[0];
+      const firstSlot = nextConfig.slots[0]!;
       const prefix = offset === 1 ? 'mañana' : DAY_NAMES_ES[nextDay];
       return {
         isOpen: false,

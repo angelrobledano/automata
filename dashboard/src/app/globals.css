@@ -77,7 +77,13 @@ body.hide-mobile-nav #mobile-nav {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Transiciones genéricas suaves para hovers */
-* {
+/* Browser surface styling */
+::selection {
+  background-color: rgba(37, 99, 235, 0.2);
+  color: #0F172A;
+}
+
+/* Transiciones específicas en interactivos (evita repaints forzados en '*') */
+a, button, input, select, textarea {
   @apply transition-colors duration-150 ease-out;
 }

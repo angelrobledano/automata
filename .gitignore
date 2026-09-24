@@ -1,5 +1,22 @@
 node_modules
 # Keep environment variables out of version control
 .env
+.env.local
+.env*.local
 
 /generated/prisma
+
+# Build artifacts
+dist/
+dashboard/.next/
+dashboard/.vercel/
+
+# Dumps and backups (may contain PII)
+db_dump.txt
+backups/
+*.sql.gz
+*.dump
+
+# Logs and OS noise
+*.log
+.DS_Store

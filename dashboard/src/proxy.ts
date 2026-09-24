@@ -38,8 +38,13 @@ export async function proxy(request: NextRequest) {
       }
 
       // Paywall (Stripe)
-      if (pathname !== '/billing' && !publicPages.includes(pathname) && !pathname.startsWith('/onboarding') && !pathname.startsWith('/backoffice')) {
-        if (!payload.isLifetimeFree && payload.subscriptionStatus !== 'ACTIVE') {
+      if (pathname !== '/billing' && !publicPages.includes(pathname) && !pathname.startsWith('/onboarding') && !pathname.startsWith('/backoffice') && !pathname.startsWith('/ajustes')) {
+        const hasAccess = payload.isLifetimeFree || 
+          payload.subscriptionStatus === 'ACTIVE' || 
+          payload.subscriptionStatus === 'TRIAL' ||
+          process.env.NODE_ENV !== 'production';
+
+        if (!hasAccess) {
           return NextResponse.redirect(new URL('/billing', request.url));
         }
       }
@@ -50,7 +55,7 @@ export async function proxy(request: NextRequest) {
 
       // Proteger rutas si es AGENTE
       if (payload.role === 'AGENT') {
-        const allowedAgentRoutes = ['/conversaciones', '/login', '/register'];
+        const allowedAgentRoutes = ['/conversaciones', '/pedidos', '/login', '/register'];
         const isAllowed = allowedAgentRoutes.some(r => pathname.startsWith(r)) || publicPages.includes(pathname);
         if (!isAllowed) {
           return NextResponse.redirect(new URL('/conversaciones', request.url));

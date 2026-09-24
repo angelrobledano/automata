@@ -187,12 +187,12 @@ export async function GET(request: Request) {
     }
 
     // Estado del Asistente
-    const waConnected = commerce.channelConnections.some(conn => conn.provider === 'META' && conn.status === 'CONNECTED');
+    const waConnected = Boolean(commerce.channelConnections?.some(conn => conn.provider === 'META' && conn.status === 'CONNECTED'));
     const assistantStatus = {
       isWorking: waConnected || sessions.length > 0,
       waConnected,
-      knowledgeCount: commerce._count.knowledgeSources,
-      hasKnowledge: commerce._count.knowledgeSources > 0,
+      knowledgeCount: commerce._count?.knowledgeSources || 0,
+      hasKnowledge: (commerce._count?.knowledgeSources || 0) > 0,
       onboardingCompleted: commerce.onboardingCompleted,
       lastActivityAt: sessions[0]?.updatedAt ? new Date(sessions[0].updatedAt).toISOString() : null
     };

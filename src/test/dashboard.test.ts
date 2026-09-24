@@ -32,12 +32,11 @@ describe('Dashboard Inbox Module', () => {
     // Verificamos que se llame a prisma
     const { prisma } = await import('../db/prisma');
     expect(prisma.session.findMany).toHaveBeenCalledWith({
-      where: { commerceId: 'commerce-1' },
+      where: { commerceId: 'commerce-1', isTest: false },
       orderBy: { updatedAt: 'desc' },
       include: {
         messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1
+          orderBy: { createdAt: 'asc' }
         }
       }
     });

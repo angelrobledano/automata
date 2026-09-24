@@ -44,7 +44,11 @@ export async function GET() {
           }))
         },
         store: {
-          wooConnected: false
+          wooConnected: Boolean((commerce.providerMetadata as any)?.wooUrl && (commerce.providerMetadata as any)?.wooConsumerKey),
+          wooUrl: (commerce.providerMetadata as any)?.wooUrl || null,
+          shopifyConnected: Boolean((commerce.providerMetadata as any)?.shopifyStoreDomain && (commerce.providerMetadata as any)?.shopifyAccessToken),
+          shopifyStoreDomain: (commerce.providerMetadata as any)?.shopifyStoreDomain || null,
+          provider: (commerce.providerMetadata as any)?.provider || ((commerce.providerMetadata as any)?.shopifyStoreDomain ? 'shopify' : (commerce.providerMetadata as any)?.wooUrl ? 'woocommerce' : 'local')
         },
         subscription: {
           status: commerce.subscriptionStatus,

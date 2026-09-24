@@ -26,7 +26,13 @@ export function detectIntentAndContext(userQuestion: string, referenceDate: Date
   const q = userQuestion.toLowerCase();
   
   let intent = 'GENERAL_INQUIRY';
-  if (q.includes('horario') || q.includes('abrir') || q.includes('abrís') || q.includes('abren') || q.includes('abierto') || q.includes('cerrado') || q.includes('festivo') || q.includes('tarde') || q.includes('mañana') || q.includes('domingo') || q.includes('sábado') || q.includes('lunes')) {
+  if (
+    q.includes('pedido') || q.includes('pedir') || q.includes('encargo') || q.includes('encargar') ||
+    q.includes('comprar') || q.includes('ordenar') || q.includes('llevar') || q.includes('domicilio') ||
+    (q.includes('quiero') && (q.includes('unidad') || q.includes('kilo') || q.includes('litro') || q.includes('ración') || q.includes('tarta') || q.includes('pizza') || q.includes('mesa')))
+  ) {
+    intent = 'ORDER';
+  } else if (q.includes('horario') || q.includes('abrir') || q.includes('abrís') || q.includes('abren') || q.includes('abierto') || q.includes('cerrado') || q.includes('festivo') || q.includes('tarde') || q.includes('por la mañana') || q.includes('domingo') || q.includes('sábado') || q.includes('lunes')) {
     intent = 'BUSINESS_HOURS';
   } else if (q.includes('precio') || q.includes('cuanto cuesta') || q.includes('cuánto cuesta') || q.includes('tarifa') || q.includes('descuento') || q.includes('promoción')) {
     intent = 'PRICING';
