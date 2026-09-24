@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../src/db/prisma';
 import { verifyToken } from '../../../lib/jwt';
-import { cookies } from 'next/headers';
+import { readCookieValue } from '../../../../../src/utils/jwt';
 import bcrypt from 'bcryptjs';
+
+// B-07: un OWNER solo puede invitar roles de negocio. Permitir SUPERADMIN/SUPPORT
+// desde aquí era una escalada de privilegios OWNER -> SUPERADMIN.
+const ASSIGNABLE_ROLES = ['AGENT', 'OWNER'];
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
+    const token = readCookieValue(request.headers.get('cookie'), 'token');
     if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
     const payload = await verifyToken(token);
@@ -19,6 +22,10 @@ export async function POST(request: Request) {
 
     if (!email || !role || !password) {
       return NextResponse.json({ error: 'Faltan campos' }, { status: 400 });
+    }
+
+    if (!ASSIGNABLE_ROLES.includes(role)) {
+      return NextResponse.json({ error: 'Rol no permitido' }, { status: 403 });
     }
 
     // Check if user already exists
@@ -48,8 +55,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
+    const token = readCookieValue(request.headers.get('cookie'), 'token');
     if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
     const payload = await verifyToken(token);

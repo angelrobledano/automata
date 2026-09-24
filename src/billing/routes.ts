@@ -2,6 +2,7 @@ import { Router } from 'express';
 import express from 'express';
 import { PaymentEngine } from './core/PaymentEngine';
 import { prisma } from '../db/prisma';
+import { verifyDashboardJwt } from '../utils/jwt';
 
 const router = Router();
 const engine = new PaymentEngine();
@@ -65,13 +66,27 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   }
 });
 
-// --- ADMIN ENDPOINTS (Mocked auth for now) ---
+// --- ADMIN ENDPOINTS (solo staff de plataforma: SUPERADMIN/SUPPORT) ---
+// Autenticación real por JWT del dashboard (Authorization: Bearer <token>).
+const requirePlatformStaff = async (req: any, res: any): Promise<boolean> => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const payload = token ? await verifyDashboardJwt(token) : null;
+  if (!payload || !['SUPERADMIN', 'SUPPORT'].includes(String(payload.role))) {
+    res.status(403).json({ error: 'Solo el staff de plataforma puede gestionar planes' });
+    return false;
+  }
+  return true;
+};
+
 router.get('/plans', async (req, res) => {
+  if (!(await requirePlatformStaff(req, res))) return;
   const plans = await prisma.plan.findMany({ include: { features: true } });
   res.json(plans);
 });
 
 router.post('/plans', async (req, res) => {
+  if (!(await requirePlatformStaff(req, res))) return;
   const data = req.body;
   const plan = await prisma.plan.create({
     data: {
@@ -88,6 +103,7 @@ router.post('/plans', async (req, res) => {
 });
 
 router.put('/plans/:id', async (req, res) => {
+  if (!(await requirePlatformStaff(req, res))) return;
   const data = req.body;
   
   // Update plan

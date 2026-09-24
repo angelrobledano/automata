@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../../../src/db/prisma';
+import { verifyToken } from '../../../../../lib/jwt';
+import { readCookieValue } from '../../../../../../../src/utils/jwt';
+
+async function requirePlatformStaff(request: Request): Promise<{ ok: true; payload: any } | { ok: false; status: 401 | 403 }> {
+  const token = readCookieValue(request.headers.get('cookie'), 'token');
+  const payload = token ? await verifyToken(token) : null;
+  if (!payload) return { ok: false, status: 401 };
+  if (!['SUPERADMIN', 'SUPPORT'].includes(String(payload.role))) return { ok: false, status: 403 };
+  return { ok: true, payload };
+}
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requirePlatformStaff(request);
+    if (!auth.ok) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: auth.status });
+    }
     const { id } = await params;
     const data = await request.json();
 
@@ -59,6 +73,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requirePlatformStaff(request);
+    if (!auth.ok) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: auth.status });
+    }
     const { id } = await params;
     await prisma.plan.delete({ where: { id } });
     return NextResponse.json({ success: true });
