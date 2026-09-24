@@ -142,9 +142,9 @@ export async function resolveApplicableFacts(
     orderBy: { priority: 'desc' }
   });
 
-  if (rules.length === 0 && intent === 'BUSINESS_HOURS') {
-    rules = await seedDefaultBusinessRules(commerceId);
-  }
+  // B-13: NUNCA inventar reglas de demo para comercios sin configuración.
+  // Antes se auto-sembraban horarios ficticios (09:00-20:00, festivo 15/8)
+  // y el bot los respondía como "hechos deterministas" de ese negocio.
 
   const matchingRules: StructuredKnowledgeRule[] = [];
   
@@ -233,6 +233,13 @@ export async function resolveApplicableFacts(
 
   const isDeterministicAnswerable = intent === 'BUSINESS_HOURS' && activeRules.length > 0;
 
+  // B-13: sin reglas configuradas, la instrucción para el LLM es honesta.
+  if (rules.length === 0) {
+    resolvedFactsText =
+      'NO HAY REGLAS DE NEGOCIO CONFIGURADAS para esta consulta. ' +
+      'NO inventes horarios, precios ni datos: di amablemente que no dispones de esa información y ofrece poner en contacto al cliente con el equipo de la tienda.';
+  }
+
   return {
     intent,
     targetDate,
@@ -246,58 +253,4 @@ export async function resolveApplicableFacts(
     isDeterministicAnswerable,
     deterministicAnswer
   };
-}
-
-async function seedDefaultBusinessRules(commerceId: string) {
-  const regularRule = await prisma.structuredKnowledgeRule.create({
-    data: {
-      commerceId,
-      type: 'BUSINESS_HOURS',
-      name: 'Horario habitual',
-      priority: 100,
-      daysOfWeek: [1, 2, 3, 4, 5],
-      isOverride: false,
-      payload: {
-        hours: [{ open: '09:00', close: '20:00' }],
-        note: 'De lunes a viernes en horario general'
-      }
-    }
-  });
-
-  const summerRule = await prisma.structuredKnowledgeRule.create({
-    data: {
-      commerceId,
-      type: 'BUSINESS_HOURS',
-      name: 'Horario de verano',
-      priority: 300,
-      monthsOfYear: [6, 7, 8, 9],
-      daysOfWeek: [1, 2, 3, 4, 5],
-      isOverride: true,
-      payload: {
-        hours: [
-          { open: '09:00', close: '14:00' },
-          { open: '19:30', close: '21:30' }
-        ],
-        note: 'Horario estacional de verano'
-      }
-    }
-  });
-
-  const holidayRule = await prisma.structuredKnowledgeRule.create({
-    data: {
-      commerceId,
-      type: 'HOLIDAY_CLOSURE',
-      name: 'Festivo 15 de Agosto',
-      priority: 500,
-      specificDate: new Date('2026-08-15T00:00:00.000Z'),
-      isOverride: true,
-      isClosed: true,
-      payload: {
-        hours: [],
-        note: 'Cierre total por festivo nacional'
-      }
-    }
-  });
-
-  return [holidayRule, summerRule, regularRule];
 }

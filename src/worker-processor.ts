@@ -18,6 +18,7 @@ import { performance } from 'perf_hooks';
 import { sanitizePII } from './utils/pii';
 import { createEmbedding, searchSimilarChunks } from './rag/index';
 import { getBusinessStatus, type WeeklySchedule } from './utils/businessHours';
+import { detectIntentAndContext } from './rag/knowledge-resolver';
 import { FeatureGuard } from './billing/core/FeatureGuard';
 import crypto from 'crypto';
 
@@ -152,7 +153,13 @@ export async function processMetaJob(job: Job, connection: IORedis) {
       // Semantic Caching & RAG Vectorization: Generar embedding una sola vez
       const todayStr = new Date().toISOString().split('T')[0];
       const cacheQueryText = `[Fecha: ${todayStr}] ${cleanText}`;
-      const queryHash = crypto.createHash('sha256').update(cacheQueryText).digest('hex');
+      // B-15: el hash incluye el commerceId (sin colisiones entre comercios)
+      const queryHash = crypto.createHash('sha256').update(`${commerceId}|${cacheQueryText}`).digest('hex');
+      // B-15: los mensajes con intención de pedido NUNCA usan caché semántica
+      // (una respuesta cacheada "tu pedido #1234 está registrado" crearía un
+      // pedido fantasma en un cliente distinto).
+      const { intent } = detectIntentAndContext(cleanText);
+      const cacheAllowed = intent !== 'ORDER';
 
       const queryEmbedding = await Sentry.startSpan({ op: 'create-embedding', name: 'Vectorizing user text' }, () =>
         createEmbedding(cacheQueryText)
@@ -191,7 +198,7 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
         `.trim();
 
       // Distancia < 0.05 significa > 0.95 similitud
-      const cachedResponses = await Sentry.startSpan({ op: 'semantic-cache-lookup', name: 'Semantic Cache Lookup' }, () =>
+      const cachedResponses = cacheAllowed ? await Sentry.startSpan({ op: 'semantic-cache-lookup', name: 'Semantic Cache Lookup' }, () =>
         prisma.$queryRaw<Array<{ response: string }>>`
           SELECT response
           FROM "SemanticCache"
@@ -200,7 +207,7 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
           ORDER BY embedding <=> ${queryEmbedding}::vector ASC
           LIMIT 1
         `
-      );
+      ) : [];
 
       let aiResponse = '';
       let isCacheHit = false;
@@ -216,12 +223,14 @@ REGLA ESTRICTA DE SEGURIDAD: Eres un asistente exclusivo de esta tienda. BAJO NI
             generateAIResponse({ ...commerce, systemPrompt: ragPrompt }, customerIdentifier, messageHistory, session.id)
           );
 
-          // Guardar en Semantic Cache
-          await prisma.$executeRaw`
-            INSERT INTO "SemanticCache" (id, "commerceId", "queryHash", embedding, response, "createdAt")
-            VALUES (${crypto.randomUUID()}, ${commerce.id}, ${queryHash}, ${queryEmbedding}::vector, ${aiResponse}, NOW())
-            ON CONFLICT ("queryHash") DO NOTHING
-          `;
+          // Guardar en Semantic Cache (solo si está permitido para este intent)
+          if (cacheAllowed) {
+            await prisma.$executeRaw`
+              INSERT INTO "SemanticCache" (id, "commerceId", "queryHash", embedding, response, "createdAt")
+              VALUES (${crypto.randomUUID()}, ${commerce.id}, ${queryHash}, ${queryEmbedding}::vector, ${aiResponse}, NOW())
+              ON CONFLICT ("queryHash") DO NOTHING
+            `;
+          }
         } catch (err) {
           throw err;
         }

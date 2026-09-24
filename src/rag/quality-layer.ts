@@ -15,10 +15,28 @@ export interface QualityValidationResult {
 
 /**
  * 1. RESPONSE QUALITY LAYER: VALIDACIÓN POST-GENERACIÓN
+ *
+ * B-23: validación GENÉRICA (antes comparaba literales hardcodeados de una
+ * pastelería demo: 20:00 / 19:30 / 21:30). Ahora extrae horas y precios de la
+ * respuesta y comprueba que estén respaldados por los hechos deterministas
+ * resueltos y, opcionalmente, por el contexto RAG.
  */
+
+function normalizeTime(t: string): string {
+  const parts = t.replace('.', ':').split(':');
+  const h = parseInt(parts[0] || '0', 10);
+  const m = parts[1] || '00';
+  return `${String(h).padStart(2, '0')}:${m}`;
+}
+
+function extractTimes(text: string): Set<string> {
+  return new Set((text.match(/\b\d{1,2}[:.]\d{2}\b/g) || []).map(normalizeTime));
+}
+
 export function validateResponseQuality(
   response: string, 
-  resolvedFacts: ResolvedFactResult
+  resolvedFacts: ResolvedFactResult,
+  allowedContext: string = ''
 ): QualityValidationResult {
   const failures: string[] = [];
   const resLower = response.toLowerCase();
@@ -35,29 +53,32 @@ export function validateResponseQuality(
     }
   }
 
-  // 2. VALIDACIÓN DE CONTRADICCIÓN DE HORARIOS Y MEZCLA DE REGLAS (OUTDATED_RULE_MIX)
-  if (resolvedFacts.intent === 'BUSINESS_HOURS' && resolvedFacts.overriddenRuleNames.includes('Horario habitual')) {
-    const mentionsRegularEnd = resLower.includes('20:00');
-    const mentionsSummerSlots = resLower.includes('19:30') || resLower.includes('21:30') || resLower.includes('14:00');
-
-    if (mentionsRegularEnd && mentionsSummerSlots) {
+  // 2. VALIDACIÓN DE HORARIOS (genérica): toda hora citada en la respuesta
+  // debe estar en los hechos resueltos o en el contexto RAG permitido.
+  if (resolvedFacts.intent === 'BUSINESS_HOURS' && resolvedFacts.resolvedFactsText) {
+    const responseTimes = extractTimes(response);
+    const allowedTimes = new Set([
+      ...extractTimes(resolvedFacts.resolvedFactsText),
+      ...extractTimes(allowedContext),
+    ]);
+    const unsupportedTimes = [...responseTimes].filter(t => !allowedTimes.has(t));
+    if (unsupportedTimes.length > 0) {
       failures.push('CONTRADICTION_DETECTED');
-    }
-
-    if (mentionsRegularEnd && !mentionsSummerSlots) {
-      failures.push('OUTDATED_RULE_MIX');
     }
   }
 
   // 3. VALIDACIÓN DE PRECIOS Y HECHOS ESTRUCTURADOS (PRICE_CONTRADICTION & CLAIM_CONSISTENCY)
   if (resolvedFacts.resolvedFactsText) {
     const factsTextLower = resolvedFacts.resolvedFactsText.toLowerCase();
+    const contextLower = allowedContext.toLowerCase();
     const factPrices = factsTextLower.match(/\d+[.,]?\d*\s*€/g) || [];
+    const contextPrices = contextLower.match(/\d+[.,]?\d*\s*€/g) || [];
     const responsePrices = resLower.match(/\d+[.,]?\d*\s*€/g) || [];
 
     if (factPrices.length > 0 && responsePrices.length > 0) {
       const isPriceSupported = responsePrices.some(rp => 
-        factPrices.some(fp => fp.replace(/\s/g, '') === rp.replace(/\s/g, ''))
+        factPrices.some(fp => fp.replace(/\s/g, '') === rp.replace(/\s/g, '')) ||
+        contextPrices.some(cp => cp.replace(/\s/g, '') === rp.replace(/\s/g, ''))
       );
       if (!isPriceSupported && !resolvedFacts.intent?.includes('GENERAL')) {
         failures.push('UNSUPPORTED_PRICE_CLAIM');
@@ -67,10 +88,7 @@ export function validateResponseQuality(
 
   let feedback = '';
   if (failures.includes('CONTRADICTION_DETECTED')) {
-    feedback += ' Has mezclado el horario habitual con el horario estacional/vigente. Respeta únicamente la regla activa resuelta.';
-  }
-  if (failures.includes('OUTDATED_RULE_MIX')) {
-    feedback += ' Has utilizado un horario anterior anulado en lugar del vigente.';
+    feedback += ' Has mencionado horarios que no figuran en el horario vigente resuelto para esa fecha. Respeta únicamente las franjas de los hechos resueltos.';
   }
   if (failures.includes('UNSUPPORTED_CLAIMS')) {
     feedback += ' Afirmas que la tienda está abierta pero para esa fecha existe un festivo/cierre total.';
@@ -83,6 +101,73 @@ export function validateResponseQuality(
     passed: failures.length === 0,
     failures,
     feedback
+  };
+}
+
+/**
+ * B-16: validación estricta de los argumentos de la tool take_order.
+ * El output del LLM NO es confiable: cantidades negativas, textos enormes o
+ * campos ausentes no deben llegar nunca a OrderService.
+ */
+export function validateTakeOrderArgs(args: unknown): { ok: true; value: {
+  customerName?: string | undefined;
+  deliveryType: 'PICKUP' | 'DELIVERY';
+  deliveryAddress?: string | undefined;
+  pickupTime?: string | undefined;
+  items: Array<{ name: string; quantity: number; price?: number | undefined; notes?: string | undefined }>;
+  notes?: string | undefined;
+} } | { ok: false; reason: string } {
+  if (!args || typeof args !== 'object') {
+    return { ok: false, reason: 'Argumentos ausentes' };
+  }
+  const a = args as Record<string, unknown>;
+
+  const cleanStr = (v: unknown, max: number): string | undefined => {
+    if (v === undefined || v === null) return undefined;
+    if (typeof v !== 'string') return undefined;
+    const s = v.trim().slice(0, max);
+    return s.length > 0 ? s : undefined;
+  };
+
+  const deliveryType = a.deliveryType === 'DELIVERY' ? 'DELIVERY' : 'PICKUP';
+
+  if (!Array.isArray(a.items) || a.items.length === 0 || a.items.length > 50) {
+    return { ok: false, reason: 'La lista de artículos está vacía o es inválida' };
+  }
+
+  const items: Array<{ name: string; quantity: number; price?: number | undefined; notes?: string | undefined }> = [];
+  for (const raw of a.items) {
+    if (!raw || typeof raw !== 'object') {
+      return { ok: false, reason: 'Artículo inválido' };
+    }
+    const item = raw as Record<string, unknown>;
+    const name = cleanStr(item.name, 200);
+    if (!name) return { ok: false, reason: 'Un artículo no tiene nombre válido' };
+    const quantity = Number(item.quantity);
+    if (!Number.isFinite(quantity) || !Number.isInteger(quantity) || quantity <= 0 || quantity > 999) {
+      return { ok: false, reason: `Cantidad inválida para "${name}"` };
+    }
+    const price = item.price === undefined || item.price === null ? undefined : Number(item.price);
+    if (price !== undefined && (!Number.isFinite(price) || price < 0 || price > 100000)) {
+      return { ok: false, reason: `Precio inválido para "${name}"` };
+    }
+    items.push({ name, quantity, price, notes: cleanStr(item.notes, 300) });
+  }
+
+  if (deliveryType === 'DELIVERY' && !cleanStr(a.deliveryAddress, 300)) {
+    return { ok: false, reason: 'Falta la dirección de entrega para un pedido a domicilio' };
+  }
+
+  return {
+    ok: true,
+    value: {
+      customerName: cleanStr(a.customerName, 120),
+      deliveryType,
+      deliveryAddress: cleanStr(a.deliveryAddress, 300),
+      pickupTime: cleanStr(a.pickupTime, 120),
+      items,
+      notes: cleanStr(a.notes, 500),
+    }
   };
 }
 
@@ -247,16 +332,28 @@ REGLAS STRICTAS DE RESPUESTA:
 
     if (toolCall) {
       try {
-        const args = JSON.parse(toolCall.function.arguments);
+        const rawArgs = JSON.parse(toolCall.function.arguments);
+        const validated = validateTakeOrderArgs(rawArgs);
+
+        if (!validated.ok) {
+          // B-16: argumentos inválidos del LLM -> NO se crea el pedido; se pide
+          // confirmación al cliente en lugar de registrar datos corruptos.
+          console.warn(`[QualityLayer] take_order con argumentos inválidos: ${validated.reason}`);
+          currentResponse = `Para registrarte el encargo correctamente necesito que me confirmes los artículos y cantidades concretas. ¿Me lo puedes repetir?`;
+          validation = { passed: true, failures: [], feedback: '' };
+          break;
+        }
+
+        const args = validated.value;
         const orderResult = await OrderService.createOrder({
           commerceId,
           sessionId: sessionId ?? undefined,
           customerName: args.customerName,
           customerPhone: customerPhone || 'Cliente',
-          deliveryType: args.deliveryType === 'DELIVERY' ? 'DELIVERY' : 'PICKUP',
+          deliveryType: args.deliveryType,
           deliveryAddress: args.deliveryAddress,
           pickupTime: args.pickupTime,
-          items: args.items || [],
+          items: args.items,
           notes: args.notes
         });
 
@@ -288,7 +385,7 @@ REGLAS STRICTAS DE RESPUESTA:
     }
 
     currentResponse = choice?.message?.content || '';
-    validation = validateResponseQuality(currentResponse, resolvedFacts);
+    validation = validateResponseQuality(currentResponse, resolvedFacts, ragContext);
 
     if (validation.passed) {
       break;
